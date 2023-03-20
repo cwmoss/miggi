@@ -8,7 +8,7 @@ class migration {
         public string $key,
         public ?string $name = null,
         public ?string $filename = null,
-        public ?string $status = null
+        public ?string $status = '-'
     ) {
     }
 }

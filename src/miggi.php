@@ -19,6 +19,7 @@ class miggi {
     }
 
     public function new_migration($name) {
+        if (!$name) throw new \LogicException('you must provide a name for your migration.');
         $fname = date('YmdHis') . '_' . $name . '.sql';
         $tpl = file_get_contents(__DIR__ . '/migration.tpl');
         file_put_contents($this->dir . '/' . $fname, $tpl);
