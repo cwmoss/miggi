@@ -26,24 +26,56 @@ https://stackoverflow.com/questions/7039010/how-to-make-alignment-on-console-in-
  *
  * Credit: https://gist.github.com/redestructa/2a7691e7f3ae69ec5161220c99e2d1b3
  */
-class TableBuilder {
+class cli_table {
+
+    public array $rows = [];
+
+    public function __construct($data, $headers, $opts = []) {
+        list($data, $headers) = $this->normalize_data($data, $headers);
+        $this->rows = $this->getTableRows($data, $headers);
+    }
+
+    /*
+        sort and reduce columns by header keys
+    */
+    public function normalize_data($data, $headers): array {
+        $sort = array_keys($headers);
+        //    $newheaders = array_values($headers);
+        $newdata = [];
+        foreach ($data as $d) {
+            $new = [];
+            $obj = is_object($d);
+            foreach ($sort as $key) {
+                $new[$key] = $obj ? $d->$key : $d[$key];
+            }
+            $newdata[] = $new;
+        }
+        return [$newdata, $headers];
+    }
+
+    public function render() {
+        return $this->echoTableRows($this->rows);
+    }
     /**
      * Echo the rendered table rows
      *
      * @param array|string[] $renderedTableRows List of rendered table row strings
      */
-    public function echoTableRows(array $renderedTableRows): void {
+    // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
+    public function echoTableRows(array $renderedTableRows): string {
         $eol = \PHP_EOL;
-        $green = '[32m'; // TODO: Make this configurable
-        $defaultColor = '[39m';
+        $green = '[95;1m'; // TODO: Make this configurable
+        $defaultColor = '[39;0m';
 
         $i = 0;
+        $res = "";
         foreach ($renderedTableRows as $rowStr) {
             $isHeaderRow = $i === 1;
             $rowColor = $isHeaderRow ? $green : $defaultColor; // Make the header row green
-            echo "\033{$rowColor}{$rowStr}{$eol}";
+            $res .= "\033{$rowColor}{$rowStr}{$eol}";
             $i++;
         }
+        return $res;
     }
 
     /**

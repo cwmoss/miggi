@@ -24,12 +24,13 @@ $res = match (true) {
     default => help()
 };
 
-var_dump($res);
-
-if ($cli->command == 'status') {
-    $table = new TableBuilder;
-    $rendered = $table->getTableRows($res[0], ['key', 'name', 'filename', 'status']);
-    $table->echoTableRows($rendered);
+if (is_string($res)) {
+    print $res;
+} elseif ($cli->command == 'status') {
+    $table = new cli_table($res[0], ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
+    print $table->render();
+} else {
+    var_dump($res);
 }
 
 function cli_exception_handler($e) {
