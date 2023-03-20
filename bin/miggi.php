@@ -15,7 +15,7 @@ $miggi = new miggi($db, __DIR__ . '/../tests/');
 
 $cli = new cli_parser($argv);
 
-print_r($cli);
+// print_r($cli);
 
 $res = match (true) {
     $cli->command == 'init' => $miggi->init(),
@@ -33,19 +33,19 @@ if ($cli->command == 'status') {
 }
 
 function cli_exception_handler($e) {
-    print "\n*** ERROR ***\n" . $e->getMessage() . "\n";
+    print "\n😢 error\n   > " . $e->getMessage() . "\n";
 }
 
 function help() {
     print <<<EOH
-i am miggi, your friendly migration tool.
-these are the commands:
+😃 hi, i'm miggi, your friendly migration tool.
+i know about these commands:
 
-init
-new name_of_the_migration
-status
-up
-down
+    init
+    new     name or description of the migration 
+    status
+    up
+    down
 
 EOH;
 }
