@@ -27,6 +27,7 @@ $res = match (true) {
 if (is_string($res)) {
     print $res;
 } elseif ($cli->command == 'status') {
+    var_dump($res[1]);
     $table = new cli_table($res[0], ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
     print $table->render();
 } else {

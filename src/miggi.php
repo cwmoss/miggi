@@ -50,6 +50,6 @@ class miggi {
     }
 
     public function fetch_applied() {
-        return [];
+        return $this->db->fetch();
     }
 }
