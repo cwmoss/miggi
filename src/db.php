@@ -17,6 +17,20 @@ class db {
         return $this->pdo->exec($query);
     }
 
+    public function execute( $query ) {
+        return $this->pdo->exec($query);
+    }
+
+    public function checkin($key){
+        $query = $this->create_checkin_statement($key);
+        return $this->pdo->exec($query);
+    }
+
+    public function checkout($key){
+        $query = $this->create_checkout_statement($key);
+        return $this->pdo->exec($query);
+    }
+
     public function fetch() {
         $query = $this->select_all_query();
         $stmt = $this->pdo->query($query);
@@ -38,5 +52,14 @@ class db {
         return sprintf('CREATE TABLE IF NOT EXISTS %s (
             version VARCHAR(255) PRIMARY KEY
           )', $this->table);
+    }
+
+    public function create_checkin_statement($key) {
+        return sprintf('INSERT INTO %s (version)
+            VALUES (%s)', $this->table, $key);
+    }
+
+    public function create_checkout_statement($key) {
+        return sprintf('DELETE FROM %s WHERE version = %s', $this->table, $key);
     }
 }

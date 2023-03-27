@@ -1,7 +1,6 @@
 -- migrate:up
--- put your up migrations here
-
+CREATE TABLE IF NOT EXISTS todos -- ein inline-kommentar
+    (title VARCHAR(50), content TEXT);
 
 -- migrate:down
-
--- can be left empty
+DROP TABLE IF EXISTS todos;

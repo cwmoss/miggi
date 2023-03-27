@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 
 namespace miggi;
@@ -21,14 +22,22 @@ $res = match (true) {
     $cli->command == 'init' => $miggi->init(),
     $cli->command == 'status' => $miggi->status(),
     $cli->command == 'new' => $miggi->new_migration(join('_', $cli->args)),
+    $cli->command == 'up' => $miggi->up( $cli->args ),
+    $cli->command == 'down' => $miggi->down( $cli->args ),
     default => help()
 };
+
+#var_dump($res);
 
 if (is_string($res)) {
     print $res;
 } elseif ($cli->command == 'status') {
-    var_dump($res[1]);
-    $table = new cli_table($res[0], ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
+    #var_dump($res[0]);
+    $table = new cli_table($res, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
+    print $table->render();
+} elseif ($cli->command == 'up') {
+    print "pending migrations\n";
+    $table = new cli_table($res, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
     print $table->render();
 } else {
     var_dump($res);
