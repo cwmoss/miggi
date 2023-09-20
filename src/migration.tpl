@@ -1,6 +1,6 @@
 -- migrate:up
 -- put your up migrations here
-/**/
+
 CREATE DATABASE databasename;
 
 CREATE TABLE table_name (
@@ -16,7 +16,7 @@ ADD column_name datatype;
 
 -- migrate:down
 -- can be left empty
-/**/
+
 DROP DATABASE databasename;
 
 ALTER TABLE table_name

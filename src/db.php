@@ -48,6 +48,25 @@ class db {
         return sprintf('SELECT version from %s ORDER BY version ASC', $this->table);
     }
 
+    /*
+    public function fetch_by_keys($keys=[]) {
+        
+        $placeholders = array_map(function(){return "?";}, $keys);
+        $placeholders_string = join(", ", $placeholders);
+        $querystring = "SELECT * 
+            FROM $this->table
+            WHERE version in ($placeholders_string)";
+        // print "placeholders $placeholders_string";
+        print ("+++querystring: $querystring");
+        $sth = $this->pdo->prepare($querystring);
+        $sth->execute($keys);
+        $res = $sth->fetchAll();
+        return $res;
+        // return sprintf('SELECT version from %s WHERE id in ('.join(",", $keys).') ORDER BY version ASC', $this->table, $keys);
+        
+    }
+    */
+
     public function create_versions_table_statement() {
         return sprintf('CREATE TABLE IF NOT EXISTS %s (
             version VARCHAR(255) PRIMARY KEY
@@ -60,6 +79,7 @@ class db {
     }
 
     public function create_checkout_statement($key) {
-        return sprintf('DELETE FROM %s WHERE version = %s', $this->table, $key);
+        $co_stmt = sprintf('DELETE FROM %s WHERE version = %s', $this->table, $key);
+        return $co_stmt;
     }
 }
