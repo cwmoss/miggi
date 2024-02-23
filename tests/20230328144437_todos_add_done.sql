@@ -1,12 +1,12 @@
 -- migrate:up
 -- put your up migrations here
 
-ALTER TABLE todos
+ALTER TABLE /*prefix*/ todos
 ADD done tinyint;
 
 
 -- migrate:down
 -- can be left empty
 
-ALTER TABLE todos
+ALTER TABLE /*prefix*/ todos
 DROP COLUMN done;

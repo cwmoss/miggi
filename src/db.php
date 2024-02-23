@@ -9,7 +9,8 @@ class db {
 
     public string $table = 'schema_migrations';
 
-    public function __construct(public PDO $pdo) {
+    public function __construct(public PDO $pdo, public String $prefix="") {
+        if($prefix) $this->table = $prefix."_".$this->table;
     }
 
     public function init() {
@@ -81,5 +82,29 @@ class db {
     public function create_checkout_statement($key) {
         $co_stmt = sprintf('DELETE FROM %s WHERE version = %s', $this->table, $key);
         return $co_stmt;
+    }
+
+
+
+    /**
+     * Check if a table exists in the current database.
+     *
+     * @param PDO $pdo PDO instance connected to a database.
+     * @param string $table Table to search for.
+     * @return bool TRUE if table exists, FALSE if no table found.
+     */
+    function table_exists($table) {
+
+        // Try a select statement against the table
+        // Run it in try-catch in case PDO is in ERRMODE_EXCEPTION.
+        try {
+            $result = $this->pdo->query("SELECT 1 FROM {$table} LIMIT 1");
+        } catch (Exception $e) {
+            // We got an exception (table not found)
+            return FALSE;
+        }
+
+        // Result is either boolean FALSE (no table found) or PDOStatement Object (table found)
+        return $result !== FALSE;
     }
 }

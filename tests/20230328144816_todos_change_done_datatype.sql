@@ -1,10 +1,10 @@
 -- migrate:up
 -- put your up migrations here
 
-ALTER TABLE todos
+ALTER TABLE /*prefix*/ todos
 DROP COLUMN done; -- modify column type wird von sqlite nicht unterstützt :(
 
-ALTER TABLE todos
+ALTER TABLE /*prefix*/ todos
 ADD done boolean;
 
 
@@ -12,10 +12,10 @@ ADD done boolean;
 -- migrate:down
 -- can be left empty
 
-ALTER TABLE todos
+ALTER TABLE /*prefix*/ todos
 DROP COLUMN done;
 
-ALTER TABLE todos
+ALTER TABLE /*prefix*/ todos
 ADD done tinyint;
 
 

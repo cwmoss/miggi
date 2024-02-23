@@ -6,16 +6,27 @@ use Exception;
 
 class miggi {
 
-    public function __construct(public db $db, public string $dir) {
+    public string $prefix;
+    public string $prefix_placeholder_regex;
+
+    public function __construct(public db $db, public string $dir, public array $opts, public array $switches) {
+        #print "miggi opts\n";
+        #print_r($this->opts);
+        $this->prefix = $this->opts['prefix']??"";
+        $this->prefix_placeholder_regex = '~/\*\s*prefix\s*\*/\s*~';
     }
 
     public function init() {
-        $res = $this->db->init();
+        $res = $this->db->init($this->opts['prefix']??"");
         return $res;
     }
 
     public function status() {
-        
+
+        if(!$this->is_initialized()){
+            return "not yet initialized" . ($this->prefix?" (with prefix ".$this->prefix.")":"") ."\n"; 
+        }
+
         $applied = array_flip($this->fetch_applied()); // applied values as keys
         #print_r($applied);
         
@@ -37,8 +48,15 @@ class miggi {
         if (!$name) throw new \LogicException('you must provide a name for your migration.');
         $fname = date('YmdHis') . '_' . $name . '.sql';
         $tpl = file_get_contents(__DIR__ . '/migration.tpl');
+        if($this->switches['prefixed']??0){
+            $tpl = str_replace(
+                "table_name",
+                "/*prefix*/ table_name",
+                $tpl
+            );
+        }
         file_put_contents($this->dir . '/' . $fname, $tpl);
-        return ($this->dir . '/' . $fname);
+        return ($this->dir . '/' . $fname ."\n");
     }
 
 
@@ -53,6 +71,7 @@ to_version - go up or down to this version
     private function
     */
     private function one($key, $direction){
+        
         print "{$key} ({$direction}) - ausführen\n";
 
         if(!$this->check_key($key)){ 
@@ -78,6 +97,12 @@ to_version - go up or down to this version
             }
 
             #print $stmt."\n";
+
+            if(!$stmt){
+                $err = "not a valid statement\n";
+                print $err;
+                return false;
+            }
 
             $res = $this->db->execute($stmt);
             if($res!==false){
@@ -113,9 +138,15 @@ to_version - go up or down to this version
         } 
 
     }
-    //
+
+
+
     // alle anstehenden migrationen ausführen
     public function up( $stats=false ) {
+
+        if (!$this->initialize_if_not_already()){
+            return "operation canceled\n";
+        }
 
         $available = $this->status();
         $appliedkeys = [];
@@ -129,15 +160,24 @@ to_version - go up or down to this version
                 $res = $this->one($appmig->key, "up"); // returns migration key
                 if($res) {
                     $appliedkeys[] = $res;
+                } else {
+                    $err = "upgrading stopped - refer to above errors\n";
+                    break;
                 }
                 
-                // print "\n+++res".$res."\n";
             } 
+        }
+        if($err??null){
+            print $err;
         }
         // print_r ($appliedkeys);
 
         if($stats==true) {
-            return ($this->fetch_by_keys($appliedkeys));
+            if(count($appliedkeys)){
+                return ($this->fetch_by_keys($appliedkeys));
+            } else {
+                return "no applicable migrations found\n";
+            }
         } else {
             return true;
         }
@@ -148,15 +188,28 @@ to_version - go up or down to this version
     // remove last applied migration
     public function down( $stats=false ) {
 
+        if (!$this->initialize_if_not_already()){
+            return "operation canceled\n";
+        }
+
         $applied = $this->fetch_applied();
         
+        if(count($applied)==0){
+            return "not able to migrate down - no more applied migrations\n";
+        }
+
         $key = end($applied);
         print "migration {$key} entfernen \n";
         
         $res = $this->one($key, "down"); // returns migration key
         
         if($stats==true) {
-            return ($this->status());
+            if($res){
+                return ($this->status());
+            } else {
+                return "not able to migrate down";
+            }
+            
         } else {
             return $res;
         }
@@ -298,6 +351,16 @@ to_version - go up or down to this version
 
         $upstr = strstr($all, "-- migrate:down", true); // alles vor migrate:down
         $upstr = trim( strstr($upstr, "-- migrate:up") ); // alles vor migrate:up entfernen
+
+        
+        $p = $this->opts['prefix']??"";
+        if($p) print("up_stmt prefix: ".$p."\n");
+        $upstr = preg_replace($this->prefix_placeholder_regex, $p?$p."_":"", $upstr, -1, $replacements);
+        if($p && $replacements == 0) {
+            print "placeholder for prefixes not found in migration file\n";
+            return false;
+        }
+    
         
         // put checks here
 
@@ -308,11 +371,21 @@ to_version - go up or down to this version
         $all = file_get_contents($file);
         
         $downstr = trim( strstr($all, "-- migrate:down") ); // alles nach migrate:down
+
+        $p = $this->opts['prefix']??"";
+        if($p) print("down_stmt prefix: ".$p."\n");
+        $downstr = preg_replace($this->prefix_placeholder_regex, $p?$p."_":"", $downstr, -1, $replacements);
+        if($p && $replacements == 0) {
+            print "placeholder for prefixes not found in migration file\n";
+            return false;
+        }
         
+        print $downstr."\n";
         // put checks here
 
         return $downstr;
     }
+
 
     // get the last applied version
     // returns a key or false
@@ -341,6 +414,36 @@ to_version - go up or down to this version
             }
         }
         return false;
+    }
+
+
+    public function is_initialized(){
+        $tn = ($this->opts['prefix']??""?$this->opts['prefix']."_":"")."schema_migrations";
+        return $this->db->table_exists($tn);
+    }
+
+    public function initialize_if_not_already(){
+        if(!$this->is_initialized()){
+            print "not yet initialized" . ($this->prefix?" (with prefix ".$this->prefix.")":"") ."\n";
+            print "do you want to initialize now? [yn]\n";
+            $answer=$this->readc();
+            if($answer=='y'){
+                print "initializing...\n";
+                $this->init(); 
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+    private function readc(){
+        $stdinpointer = fopen ("php://stdin", "r");
+        $line = fgets($stdinpointer);
+        fclose($stdinpointer);
+        return trim ($line);
     }
 
     
