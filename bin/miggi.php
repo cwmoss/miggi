@@ -3,7 +3,7 @@
 
 namespace miggi;
 
-use PDO, Dotenv;
+use PDO, PDOException, Dotenv;
 
 require_once(__DIR__ . '/../vendor/autoload.php');
 
@@ -12,14 +12,30 @@ set_exception_handler('miggi\\cli_exception_handler');
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__."/..");
 $dotenv->load();
 
-
-
 $cli = new cli_parser($argv);
-#print_r($cli);
 
-#$prefix = $cli->opts['pre'] ?? "";
+$retries = 0;
+function dbconnect(){
+    try {
+        $pdo = new PDO($_ENV['DATABASE_URL']);
+        return $pdo;
+    } catch (PDOException $e) {
+        print "Fehler beim verbinden mit der Datenbank ".$retries?"($retries Versuch/e)":"";
+        // z.B. nach einem Timeout versuchen, die Verbindung erneut aufzubauen
+        if ($retries < 4){
+            sleep(5);
+            $retries++;
+            dbconnect();
+        } else {
+            return $e;
+        }
+    }
+}
+// $pdo = dbconnect($_ENV['DATABASE_URL']);
 
-$pdo = new PDO('sqlite:test.db');
+#$dsn = "pgsql:host=$host;port=5432;dbname=$db;";
+
+$pdo = new PDO($_ENV['DATABASE_URL'], $_ENV['DEFAULT_DB_USER'], $_ENV['DEFAULT_DB_PASSWORD']);
 $db = new db($pdo, $cli->opts['prefix']??"");
 
 $miggi = new miggi($db, __DIR__ . '/../tests/', $cli->opts, $cli->switches);

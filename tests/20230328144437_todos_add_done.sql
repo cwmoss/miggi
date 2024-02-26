@@ -2,7 +2,7 @@
 -- put your up migrations here
 
 ALTER TABLE /*prefix*/ todos
-ADD done tinyint;
+ADD done integer; -- postgres does not have TINYINT
 
 
 -- migrate:down

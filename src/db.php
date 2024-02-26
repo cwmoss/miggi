@@ -80,7 +80,7 @@ class db {
     }
 
     public function create_checkout_statement($key) {
-        $co_stmt = sprintf('DELETE FROM %s WHERE version = %s', $this->table, $key);
+        $co_stmt = sprintf('DELETE FROM %s WHERE version = \'%s\'', $this->table, $key);
         return $co_stmt;
     }
 

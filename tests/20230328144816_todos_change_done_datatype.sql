@@ -16,7 +16,7 @@ ALTER TABLE /*prefix*/ todos
 DROP COLUMN done;
 
 ALTER TABLE /*prefix*/ todos
-ADD done tinyint;
+ADD done integer;
 
 
 
