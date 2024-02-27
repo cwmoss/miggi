@@ -12,34 +12,34 @@ class miggi {
     public function __construct(public db $db, public string $dir, public array $opts, public array $switches) {
         #print "miggi opts\n";
         #print_r($this->opts);
-        $this->prefix = $this->opts['prefix']??"";
+        $this->prefix = $this->opts['prefix'] ?? "";
         $this->prefix_placeholder_regex = '~/\*\s*prefix\s*\*/\s*~';
     }
 
-    public function init() {
-        $res = $this->db->init($this->opts['prefix']??"");
-        return $res;
+    public function init(): bool {
+        $res = $this->db->init($this->opts['prefix'] ?? "");
+        return $res === 0;
     }
 
     public function status() {
 
-        if(!$this->is_initialized()){
-            return "not yet initialized" . ($this->prefix?" (with prefix ".$this->prefix.")":"") ."\n"; 
+        if (!$this->is_initialized()) {
+            return "not yet initialized" . ($this->prefix ? " (with prefix " . $this->prefix . ")" : "") . "\n";
         }
 
         $applied = array_flip($this->fetch_applied()); // applied values as keys
         #print_r($applied);
-        
+
         $available = $this->fetch_available();
-        foreach($available as $appmig){            
-            if(isset($applied[$appmig->key])){
+        foreach ($available as $appmig) {
+            if (isset($applied[$appmig->key])) {
                 $appmig->status = "applied";
             } else {
                 $appmig->status = "pending";
             }
             #print_r($appmig);
         }
-        
+
         return $available;
         #return $this->merged($available, $applied);
     }
@@ -48,7 +48,7 @@ class miggi {
         if (!$name) throw new \LogicException('you must provide a name for your migration.');
         $fname = date('YmdHis') . '_' . $name . '.sql';
         $tpl = file_get_contents(__DIR__ . '/migration.tpl');
-        if($this->switches['prefixed']??0){
+        if ($this->switches['prefixed'] ?? 0) {
             $tpl = str_replace(
                 "table_name",
                 "/*prefix*/ table_name",
@@ -56,11 +56,11 @@ class miggi {
             );
         }
         file_put_contents($this->dir . '/' . $fname, $tpl);
-        return ($this->dir . '/' . $fname ."\n");
+        return ($this->dir . '/' . $fname . "\n");
     }
 
 
-/* 
+    /* 
 up - apply all pending migrations
 down - go back 1 migration
 to_version - go up or down to this version
@@ -70,27 +70,27 @@ to_version - go up or down to this version
     einzelne migration ausführen
     private function
     */
-    private function one($key, $direction){
-        
+    private function one($key, $direction) {
+
         print "{$key} ({$direction}) - ausführen\n";
 
-        if(!$this->check_key($key)){ 
+        if (!$this->check_key($key)) {
             print "not a valid key\n";
             return false;
         }
 
-        $files = glob($this->dir.$key.'_*');
-        if(count($files)>1) {
+        $files = glob($this->dir . $key . '_*');
+        if (count($files) > 1) {
             throw new Exception("multiple files with the same key {$key}??");
-        } else if(count($files)<1) {
+        } else if (count($files) < 1) {
             $err = "no migration file for key {$key} found\n";
             print $err;
             return false;
         } else {
-            if($direction === "up"){
-                $stmt = $this->up_stmt( $files[0] );
-            } else if($direction === "down"){
-                $stmt = $this->down_stmt( $files[0] );
+            if ($direction === "up") {
+                $stmt = $this->up_stmt($files[0]);
+            } else if ($direction === "down") {
+                $stmt = $this->down_stmt($files[0]);
             } else {
                 $err = "direction parameter must be 'up' or 'down'\n";
                 print $err;
@@ -98,19 +98,19 @@ to_version - go up or down to this version
 
             #print $stmt."\n";
 
-            if(!$stmt){
+            if (!$stmt) {
                 $err = "not a valid statement\n";
                 print $err;
                 return false;
             }
 
             $res = $this->db->execute($stmt);
-            if($res!==false){
+            if ($res !== false) {
 
-                if($direction === "up"){
+                if ($direction === "up") {
                     print "checking in version {$key}\n";
-                    $check_in_result = $this->db->checkin( $key );
-                    if( $check_in_result == false){
+                    $check_in_result = $this->db->checkin($key);
+                    if ($check_in_result == false) {
                         $err = "fehler beim checkin\n";
                         print $err;
                         // migration eingefügt, schema_migrations aber nicht aktualisiert 
@@ -118,62 +118,58 @@ to_version - go up or down to this version
                     }
                 } else {
                     print "checking out version {$key}\n";
-                    $check_out_result = $this->db->checkout( $key );
-                    if( $check_out_result == false){
+                    $check_out_result = $this->db->checkout($key);
+                    if ($check_out_result == false) {
                         $err = "fehler beim checkout\n";
                         print $err;
                         // migration entfernt, schema_migrations aber nicht aktualisiert 
                         return false;
                     }
                 }
-                
+
                 return $key;
-            
             } else {
                 $err = "fehler bei der migration\n";
-                print $err; 
+                print $err;
                 return false;
             }
-
-        } 
-
+        }
     }
 
 
 
     // alle anstehenden migrationen ausführen
-    public function up( $stats=false ) {
+    public function up($stats = false) {
 
-        if (!$this->initialize_if_not_already()){
+        if (!$this->initialize_if_not_already()) {
             return "operation canceled\n";
         }
 
         $available = $this->status();
         $appliedkeys = [];
 
-        foreach($available as $appmig){            
-            if($appmig->status === "pending"){
+        foreach ($available as $appmig) {
+            if ($appmig->status === "pending") {
                 $file = $this->dir . $appmig->file;
-                  
+
                 print "{$appmig->key} - ausführen\n";
-                
+
                 $res = $this->one($appmig->key, "up"); // returns migration key
-                if($res) {
+                if ($res) {
                     $appliedkeys[] = $res;
                 } else {
                     $err = "upgrading stopped - refer to above errors\n";
                     break;
                 }
-                
-            } 
+            }
         }
-        if($err??null){
+        if ($err ?? null) {
             print $err;
         }
         // print_r ($appliedkeys);
 
-        if($stats==true) {
-            if(count($appliedkeys)){
+        if ($stats == true) {
+            if (count($appliedkeys)) {
                 return ($this->fetch_by_keys($appliedkeys));
             } else {
                 return "no applicable migrations found\n";
@@ -181,87 +177,89 @@ to_version - go up or down to this version
         } else {
             return true;
         }
-        
-
     }
 
     // remove last applied migration
-    public function down( $stats=false ) {
+    public function down($stats = false) {
 
-        if (!$this->initialize_if_not_already()){
+        if (!$this->initialize_if_not_already()) {
             return "operation canceled\n";
         }
 
         $applied = $this->fetch_applied();
-        
-        if(count($applied)==0){
+
+        if (count($applied) == 0) {
             return "not able to migrate down - no more applied migrations\n";
         }
 
         $key = end($applied);
         print "migration {$key} entfernen \n";
-        
+
         $res = $this->one($key, "down"); // returns migration key
-        
-        if($stats==true) {
-            if($res){
+
+        if ($stats == true) {
+            if ($res) {
                 return ($this->status());
             } else {
                 return "not able to migrate down";
             }
-            
         } else {
             return $res;
         }
-        
     }
 
-    public function to_version($key){
+    public function to_version($key) {
 
         $all = $this->status();
         $appliedkeys = [];
-        
-        if(!$this->check_key($key)){ 
+
+        if (!$this->check_key($key)) {
             print "not a valid key\n";
             return $all;
         }
-        
+
         $latest = $this->latest();
-        if($latest == $key) {
+        if ($latest == $key) {
             print "up to date";
             return $all;
         }
-        print "key: ".$key." - latest: ".$latest."\n";
-        
-        
-        if($key > $latest){ //up
+        print "key: " . $key . " - latest: " . $latest . "\n";
+
+
+        if ($key > $latest) { //up
             print "migrate up\n";
-            foreach($all as $i => $mig){
-                if($mig->key <= $latest || $mig->key > $key){
+            foreach ($all as $i => $mig) {
+                if ($mig->key <= $latest || $mig->key > $key) {
                     unset($all[$i]);
-                } 
+                }
             }
-            $all = array_map(function($m){ $m->status = "applying"; return $m; }, $all);
+            $all = array_map(function ($m) {
+                $m->status = "applying";
+                return $m;
+            }, $all);
             $direction = "up";
         } else { //down
             print "rollback down\n";
-            foreach($all as $i => $mig){
-                if($mig->key <= $key || $mig->key > $latest){
+            foreach ($all as $i => $mig) {
+                if ($mig->key <= $key || $mig->key > $latest) {
                     unset($all[$i]);
                 }
             }
             $all = array_reverse($all);
-            $all = array_map(function($m){ $m->status = "rolling back"; return $m; }, $all);
+            $all = array_map(function ($m) {
+                $m->status = "rolling back";
+                return $m;
+            }, $all);
             $direction = "down";
         }
 
-        foreach($all as $mig){
+        foreach ($all as $mig) {
             $res = $this->one($mig->key, $direction);
             $appliedkeys[] = $res;
         }
 
         #print $appliedkeys;
-        
+
         return $all;
 
         /*
@@ -308,19 +306,19 @@ to_version - go up or down to this version
 
     // get all pending migrations
     // returns array (which can be empty)
-    public function fetch_pending(){
+    public function fetch_pending() {
         $available = $this->fetch_available();
         $applied = $this->fetch_applied();
         $pending = [];
-        foreach($available as $avmig){
-            if(!in_array($avmig->key, $applied)){
+        foreach ($available as $avmig) {
+            if (!in_array($avmig->key, $applied)) {
                 $pending[] = $avmig;
             }
         }
         return $pending;
     }
 
-    public function fetch_by_keys($keys){
+    public function fetch_by_keys($keys) {
 
         $candidates = glob($this->dir . '/*.sql');
         $result = [];
@@ -331,9 +329,9 @@ to_version - go up or down to this version
             }
             return true;
         });
-        foreach ($candidates as $filename){
+        foreach ($candidates as $filename) {
             list($key, $name) = explode('_', basename($filename, '.sql'), 2);
-            if(in_array($key, $keys)) {
+            if (in_array($key, $keys)) {
                 $appmig = new migration($key, $name, $filename);
                 $appmig->status = "applied";
                 $result[] = $appmig;
@@ -344,43 +342,43 @@ to_version - go up or down to this version
     }
 
 
-    public function up_stmt( $file ){
+    public function up_stmt($file) {
         $all = file_get_contents($file);
 
         #list($upstr, $downstr) = explode("-- migrate:down", $all);
 
         $upstr = strstr($all, "-- migrate:down", true); // alles vor migrate:down
-        $upstr = trim( strstr($upstr, "-- migrate:up") ); // alles vor migrate:up entfernen
+        $upstr = trim(strstr($upstr, "-- migrate:up")); // alles vor migrate:up entfernen
 
-        
-        $p = $this->opts['prefix']??"";
-        if($p) print("up_stmt prefix: ".$p."\n");
-        $upstr = preg_replace($this->prefix_placeholder_regex, $p?$p."_":"", $upstr, -1, $replacements);
-        if($p && $replacements == 0) {
+
+        $p = $this->opts['prefix'] ?? "";
+        if ($p) print("up_stmt prefix: " . $p . "\n");
+        $upstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $upstr, -1, $replacements);
+        if ($p && $replacements == 0) {
             print "placeholder for prefixes not found in migration file\n";
             return false;
         }
-    
-        
+
+
         // put checks here
 
         return $upstr;
     }
 
-    public function down_stmt( $file ){
+    public function down_stmt($file) {
         $all = file_get_contents($file);
-        
-        $downstr = trim( strstr($all, "-- migrate:down") ); // alles nach migrate:down
 
-        $p = $this->opts['prefix']??"";
-        if($p) print("down_stmt prefix: ".$p."\n");
-        $downstr = preg_replace($this->prefix_placeholder_regex, $p?$p."_":"", $downstr, -1, $replacements);
-        if($p && $replacements == 0) {
+        $downstr = trim(strstr($all, "-- migrate:down")); // alles nach migrate:down
+
+        $p = $this->opts['prefix'] ?? "";
+        if ($p) print("down_stmt prefix: " . $p . "\n");
+        $downstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $downstr, -1, $replacements);
+        if ($p && $replacements == 0) {
             print "placeholder for prefixes not found in migration file\n";
             return false;
         }
-        
-        print $downstr."\n";
+
+        print $downstr . "\n";
         // put checks here
 
         return $downstr;
@@ -389,9 +387,9 @@ to_version - go up or down to this version
 
     // get the last applied version
     // returns a key or false
-    public function latest(){
+    public function latest() {
         $applied = $this->fetch_applied();
-        if(count($applied)){
+        if (count($applied)) {
             $res = end($applied);
         } else {
             $res = false;
@@ -399,7 +397,7 @@ to_version - go up or down to this version
         return $res;
     }
 
-    public function check_key($key){
+    public function check_key($key) {
         if (preg_match('!^\d{14}!', $key)) {
             return $key;
         }
@@ -407,9 +405,9 @@ to_version - go up or down to this version
     }
 
     // finds the array-index of a migration in a migration-list 
-    public function find_index($list, $key){
-        foreach ( $list as $k => $v ) {
-            if ( $key == $k->key ) {
+    public function find_index($list, $key) {
+        foreach ($list as $k => $v) {
+            if ($key == $k->key) {
                 return $k;
             }
         }
@@ -417,19 +415,19 @@ to_version - go up or down to this version
     }
 
 
-    public function is_initialized(){
-        $tn = ($this->opts['prefix']??""?$this->opts['prefix']."_":"")."schema_migrations";
+    public function is_initialized() {
+        $tn = ($this->opts['prefix'] ?? "" ? $this->opts['prefix'] . "_" : "") . "schema_migrations";
         return $this->db->table_exists($tn);
     }
 
-    public function initialize_if_not_already(){
-        if(!$this->is_initialized()){
-            print "not yet initialized" . ($this->prefix?" (with prefix ".$this->prefix.")":"") ."\n";
+    public function initialize_if_not_already() {
+        if (!$this->is_initialized()) {
+            print "not yet initialized" . ($this->prefix ? " (with prefix " . $this->prefix . ")" : "") . "\n";
             print "do you want to initialize now? [yn]\n";
-            $answer=$this->readc();
-            if($answer=='y'){
+            $answer = $this->readc();
+            if ($answer == 'y') {
                 print "initializing...\n";
-                $this->init(); 
+                $this->init();
                 return true;
             } else {
                 return false;
@@ -439,12 +437,10 @@ to_version - go up or down to this version
     }
 
 
-    private function readc(){
-        $stdinpointer = fopen ("php://stdin", "r");
+    private function readc() {
+        $stdinpointer = fopen("php://stdin", "r");
         $line = fgets($stdinpointer);
         fclose($stdinpointer);
-        return trim ($line);
+        return trim($line);
     }
-
-    
 }

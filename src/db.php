@@ -9,8 +9,8 @@ class db {
 
     public string $table = 'schema_migrations';
 
-    public function __construct(public PDO $pdo, public String $prefix="") {
-        if($prefix) $this->table = $prefix."_".$this->table;
+    public function __construct(public PDO $pdo, public String $prefix = "") {
+        if ($prefix) $this->table = $prefix . "_" . $this->table;
     }
 
     public function init() {
@@ -18,16 +18,16 @@ class db {
         return $this->pdo->exec($query);
     }
 
-    public function execute( $query ) {
+    public function execute($query) {
         return $this->pdo->exec($query);
     }
 
-    public function checkin($key){
+    public function checkin($key) {
         $query = $this->create_checkin_statement($key);
         return $this->pdo->exec($query);
     }
 
-    public function checkout($key){
+    public function checkout($key) {
         $query = $this->create_checkout_statement($key);
         return $this->pdo->exec($query);
     }
