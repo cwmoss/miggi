@@ -38,7 +38,7 @@ function dbconnect(){
 $pdo = new PDO($_ENV['DATABASE_URL'], $_ENV['DEFAULT_DB_USER'], $_ENV['DEFAULT_DB_PASSWORD']);
 $db = new db($pdo, $cli->opts['prefix']??"");
 
-$miggi = new miggi($db, __DIR__ . '/../tests/', $cli->opts, $cli->switches);
+$miggi = new miggi($db, __DIR__ . $_ENV['MIGRATIONS_DIR']??"/../migrations/", $cli->opts, $cli->switches);
 
 $res = match (true) {
     $cli->command == 'init' => $miggi->init(),

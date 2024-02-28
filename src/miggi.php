@@ -72,66 +72,88 @@ to_version - go up or down to this version
     */
     private function one($key, $direction) {
 
-        print "{$key} ({$direction}) - ausführen\n";
+        $result = new miggi_result("{$key} ({$direction}) - ausführen\n", [$key], false);
+
+        # print "{$key} ({$direction}) - ausführen\n";
 
         if (!$this->check_key($key)) {
-            print "not a valid key\n";
-            return false;
+            $result->msg .= "not a valid key\n";
+            return $result;
         }
 
         $files = glob($this->dir . $key . '_*');
         if (count($files) > 1) {
-            throw new Exception("multiple files with the same key {$key}??");
+            #throw new Exception("multiple files with the same key {$key}??");
+            $result->msg .= "multiple files with the same key {$key}??\n";
+            return $result;
         } else if (count($files) < 1) {
-            $err = "no migration file for key {$key} found\n";
-            print $err;
-            return false;
+            $result->msg .= "no migration file for key {$key} found\n";
+            return $result;
+            #throw new Exception("no migration file for key {$key} found");
+            #$err = "no migration file for key {$key} found\n";
+            #print $err;
+            #return false;
         } else {
             if ($direction === "up") {
                 $stmt = $this->up_stmt($files[0]);
             } else if ($direction === "down") {
                 $stmt = $this->down_stmt($files[0]);
             } else {
-                $err = "direction parameter must be 'up' or 'down'\n";
-                print $err;
+                $result->msg .= "direction parameter must be 'up' or 'down'\n";
+                return $result;
+                #$err = "direction parameter must be 'up' or 'down'\n";
+                #print $err;
             }
 
             #print $stmt."\n";
 
             if (!$stmt) {
-                $err = "not a valid statement\n";
-                print $err;
-                return false;
+                $result->msg .= "not a valid statement\n";
+                return $result;
+                #$err = "not a valid statement\n";
+                #print $err;
+                #return false;
             }
 
             $res = $this->db->execute($stmt);
             if ($res !== false) {
 
                 if ($direction === "up") {
-                    print "checking in version {$key}\n";
+                    $result->msg .=  "checking in version {$key}\n";
                     $check_in_result = $this->db->checkin($key);
                     if ($check_in_result == false) {
-                        $err = "fehler beim checkin\n";
-                        print $err;
                         // migration eingefügt, schema_migrations aber nicht aktualisiert 
-                        return false;
+                        $result->msg .= "fehler beim checkin\n";
+                        return $result;
+                        #print $err;
+                        #return false;
+                    } else {
+                        $result->success = true;
                     }
                 } else {
-                    print "checking out version {$key}\n";
+                    $result->msg .=  "checking out version {$key}\n";
                     $check_out_result = $this->db->checkout($key);
                     if ($check_out_result == false) {
-                        $err = "fehler beim checkout\n";
-                        print $err;
                         // migration entfernt, schema_migrations aber nicht aktualisiert 
-                        return false;
+                        $result->msg .= "fehler beim checkout\n";
+                        return $result;
+                        #$err = "fehler beim checkout\n";
+                        #print $err;
+                        
+                        #return false;
+                    } else {
+                        $result->success = true;
                     }
                 }
-
-                return $key;
+                #$result->success = true;
+                return $result;
+                #return $key;
             } else {
-                $err = "fehler bei der migration\n";
-                print $err;
-                return false;
+                #$err = "fehler bei der migration\n";
+                #print $err;
+                #return false;
+                $result->msg .= "fehler bei der migration\n";
+                return $result;
             }
         }
     }
@@ -154,17 +176,18 @@ to_version - go up or down to this version
 
                 print "{$appmig->key} - ausführen\n";
 
-                $res = $this->one($appmig->key, "up"); // returns migration key
-                if ($res) {
-                    $appliedkeys[] = $res;
+                $res = $this->one($appmig->key, "up"); // returns miggi_result --migration key--
+                if ($res->success) {
+                    $appliedkeys[] = $res->keys[0];
                 } else {
-                    $err = "upgrading stopped - refer to above errors\n";
+                    $res->msg .= "upgrading stopped - refer to above errors\n";
+                    #$err = "upgrading stopped - refer to above errors\n";
                     break;
                 }
             }
         }
-        if ($err ?? null) {
-            print $err;
+        if (!$res->success) {
+            print $res->msg;
         }
         // print_r ($appliedkeys);
 
@@ -198,9 +221,10 @@ to_version - go up or down to this version
         $res = $this->one($key, "down"); // returns migration key
 
         if ($stats == true) {
-            if ($res) {
+            if ($res->success) {
                 return ($this->status());
             } else {
+                print $res->msg;
                 return "not able to migrate down";
             }
         } else {
@@ -255,7 +279,7 @@ to_version - go up or down to this version
 
         foreach ($all as $mig) {
             $res = $this->one($mig->key, $direction);
-            $appliedkeys[] = $res;
+            $appliedkeys[] = $res->keys[0];
         }
 
         #print $appliedkeys;
