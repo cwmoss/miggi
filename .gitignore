@@ -3,3 +3,4 @@ vendor/
 test.db
 .phpunit.result.cache
 unit.db
+.DS_Store

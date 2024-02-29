@@ -139,7 +139,7 @@ to_version - go up or down to this version
                         return $result;
                         #$err = "fehler beim checkout\n";
                         #print $err;
-                        
+
                         #return false;
                     } else {
                         $result->success = true;

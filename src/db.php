@@ -9,8 +9,8 @@ class db {
 
     public string $table = 'schema_migrations';
 
-    public function __construct(public PDO $pdo, public String $prefix = "") {
-        if ($prefix) $this->table = $prefix . "_" . $this->table;
+    public function __construct(public pdox $pdo, public String $prefix = "") {
+        // if ($prefix) $this->table = $prefix . "_" . $this->table;
     }
 
     public function init() {
@@ -18,35 +18,21 @@ class db {
         return $this->pdo->exec($query);
     }
 
-    public function execute($query) {
-        return $this->pdo->exec($query);
-    }
-
     public function checkin($key) {
-        $query = $this->create_checkin_statement($key);
-        return $this->pdo->exec($query);
+        return $this->pdo->insert($this->table, ['version' => $key]);
+        # $query = $this->create_checkin_statement($key);
+        # return $this->pdo->exec($query);
     }
 
     public function checkout($key) {
-        $query = $this->create_checkout_statement($key);
-        return $this->pdo->exec($query);
+        return $this->pdo->delete($this->table, 'version=?', [$key]);
+        # $query = $this->create_checkout_statement($key);
+        # return $this->pdo->exec($query);
     }
 
     public function fetch() {
-        $query = $this->select_all_query();
-        $stmt = $this->pdo->query($query);
-        if ($stmt === false) {
-            throw new Exception("could not query versions from {$this->table}");
-        }
-        $res = $stmt->fetchAll();
-        if ($res === false) {
-            throw new Exception("could not fetch versions from {$this->table}");
-        }
+        $res = $this->pdo->select_all($this->table, 'version', 'ORDER BY version ASC');
         return array_map(fn ($r) => $r['version'], $res);
-    }
-
-    public function select_all_query() {
-        return sprintf('SELECT version from %s ORDER BY version ASC', $this->table);
     }
 
     /*
@@ -71,7 +57,13 @@ class db {
     public function create_versions_table_statement() {
         return sprintf('CREATE TABLE IF NOT EXISTS %s (
             version VARCHAR(255) PRIMARY KEY
-          )', $this->table);
+          )', $this->pdo->table($this->table));
+    }
+
+    /*
+
+    public function select_all_query() {
+        return sprintf('SELECT version from %s ORDER BY version ASC', $this->table);
     }
 
     public function create_checkin_statement($key) {
@@ -83,8 +75,11 @@ class db {
         $co_stmt = sprintf('DELETE FROM %s WHERE version = \'%s\'', $this->table, $key);
         return $co_stmt;
     }
+    */
 
-
+    public function execute($query) {
+        return $this->pdo->exec($query);
+    }
 
     /**
      * Check if a table exists in the current database.
@@ -94,6 +89,7 @@ class db {
      * @return bool TRUE if table exists, FALSE if no table found.
      */
     function table_exists($table) {
+        $table = $this->pdo->table($table);
 
         // Try a select statement against the table
         // Run it in try-catch in case PDO is in ERRMODE_EXCEPTION.
