@@ -17,7 +17,12 @@ class miggi {
     }
 
     public function init(): bool {
-        $res = $this->db->init($this->opts['prefix'] ?? "");
+        $q = file_get_contents(__DIR__ . '/miggi.sql');
+
+        $q = $this->handle_prefix($q, $this->opts['prefix'] ?? '', $total);
+        $res = $this->db->execute($q);
+
+        // $res = $this->db->init($this->opts['prefix'] ?? "");
         return $res === 0;
     }
 
@@ -365,6 +370,10 @@ to_version - go up or down to this version
         return $result;
     }
 
+    public function handle_prefix(string $ddl, string $prefix, ?int &$total_found): string {
+        $ddl = preg_replace($this->prefix_placeholder_regex, $prefix ? $prefix . "_" : "", $ddl, -1, $total_found);
+        return $ddl;
+    }
 
     public function up_stmt($file) {
         $all = file_get_contents($file);
