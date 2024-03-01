@@ -14,6 +14,7 @@ class miggi {
         #print_r($this->opts);
         $this->prefix = $this->opts['prefix'] ?? "";
         $this->prefix_placeholder_regex = '~/\*\s*prefix\s*\*/\s*~';
+        $this->dir = rtrim($dir, '/') . '/';
     }
 
     public function init(): bool {
@@ -179,7 +180,7 @@ to_version - go up or down to this version
             if ($appmig->status === "pending") {
                 $file = $this->dir . $appmig->file;
 
-                print "{$appmig->key} - ausführen\n";
+                print "{$appmig->key} - ausführen $file\n";
 
                 $res = $this->one($appmig->key, "up"); // returns miggi_result --migration key--
                 if ($res->success) {
