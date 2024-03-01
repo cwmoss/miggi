@@ -29,6 +29,8 @@ class pdox extends PDO {
     protected bool $_allowNestedTransaction = false;
     protected int $_transactionLevel = 0;
 
+    public string $driver_name;
+
     public function __construct(
         $dsn,
         array $pdo_options = [],
@@ -41,8 +43,8 @@ class pdox extends PDO {
         $this->log('CONNECT', $t, ['dsn' => $dsn]);
 
         // $this->setAttribute(PDO::ATTR_STATEMENT_CLASS, [pdox_statement::class, [$this]]);
-
-        switch ($this->getAttribute(PDO::ATTR_DRIVER_NAME)) {
+        $this->driver_name = $this->getAttribute(PDO::ATTR_DRIVER_NAME);
+        switch ($this->driver_name) {
             case 'mysql':
                 $this->_nameOpening = $this->_nameClosing = '`';
                 break;
@@ -61,7 +63,7 @@ class pdox extends PDO {
                 );*/
                 // $this->setAttribute(PDO::ATTR_STATEMENT_CLASS, array('pdoext_SQLiteStatement'));
                 // fallthru
-
+            case 'pgsql':
             default:
                 $this->_nameOpening = $this->_nameClosing = '"';
                 break;

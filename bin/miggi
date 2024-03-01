@@ -53,6 +53,7 @@ $res = match (true) {
     $cli->command == 'up' => $miggi->up(true),
     $cli->command == 'down' => $miggi->down(true),
     $cli->command == 'to_version' => $miggi->to_version($cli->args[0]),
+    $cli->command == 'import-legacy' => import_legacy::import($cli->args[0], $miggi->dir),
     default => help()
 };
 
@@ -108,6 +109,9 @@ i know about these commands:
     to_version \e[0m \e[93m key    \e[0m
         up- or downgrade to version specified by key
 
+    \e[1m\e[96m   
+    import-legacy \e[0m \e[93m from-directory    \e[0m
+        import legacy migration classes
 
     options
     --prefix=xyz 

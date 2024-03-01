@@ -8,18 +8,21 @@ class miggi {
 
     public string $prefix;
     public string $prefix_placeholder_regex;
+    public string $driver_name;
 
     public function __construct(
-        public db $db, 
-        public string $dir, 
-        public array $opts, 
-        public array $switches
+        public db $db,
+        public string $dir,
+        public array $opts,
+        public array $switches,
+        public bool $auto_answer = true
     ) {
         #print "miggi opts\n";
         #print_r($this->opts);
         $this->prefix = $this->opts['prefix'] ?? "";
         $this->prefix_placeholder_regex = '~/\*\s*prefix\s*\*/\s*~';
         $this->dir = rtrim($dir, '/') . '/';
+        $this->driver_name = $this->db->pdo->driver_name;
     }
 
     public function init(): bool {
@@ -92,13 +95,13 @@ to_version - go up or down to this version
             return $result;
         }
 
-        try{
+        try {
             $file = $this->get_migration_file($key);
-        } catch (Exception $e){
-            $result->msg .= $e->getMessage()."\n";
+        } catch (Exception $e) {
+            $result->msg .= $e->getMessage() . "\n";
             return $result;
         }
-        
+
         if ($direction === "up") {
             $stmt = $this->up_stmt($file);
         } else if ($direction === "down") {
@@ -114,13 +117,19 @@ to_version - go up or down to this version
             $result->msg .= "not a valid statement\n";
             return $result;
         }
+        if (!is_array($stmt)) $stmt = [$stmt];
+        print("++ one, statements");
+        print_r($stmt);
 
-        $res = $this->db->execute($stmt);
+        foreach ($stmt as $s) {
+            $res = $this->db->execute($s);
+            if ($res === false) break;
+        }
         if ($res !== false) {
 
-            $io = $direction=='up'?'in':'out';
+            $io = $direction == 'up' ? 'in' : 'out';
             $result->msg .=  "checking {$io} version {$key}\n";
-            $checkf = "check".$io;
+            $checkf = "check" . $io;
             $checkin_result = $this->db->$checkf($key);
             if ($checkin_result == false) {
                 // migration gemacht, schema_migrations aber nicht aktualisiert 
@@ -131,7 +140,6 @@ to_version - go up or down to this version
             }
 
             return $result;
-            
         }
     }
 
@@ -279,7 +287,7 @@ to_version - go up or down to this version
     returns list of migration-objects
     */
     public function fetch_available() {
-        $candidates = glob($this->dir . '/*.sql');
+        $candidates = glob($this->dir . '/*.{sql,php}', \GLOB_BRACE);
 
         $candidates = array_filter($candidates, function ($f) {
             if (!preg_match('!^\d{14}_!', basename($f))) {
@@ -347,7 +355,22 @@ to_version - go up or down to this version
         return $ddl;
     }
 
+    public function statements_php(string $file, string $direction) {
+        [$key, $name] = explode('_', basename($file, '.php'), 2);
+        $clasn = "miggi\\migrations\\$name";
+        include($file);
+        $m = new $clasn($this->driver_name, $this->prefix);
+        $m->$direction();
+        return $m->ddl;
+    }
+
     public function up_stmt($file) {
+        $type = pathinfo($file, \PATHINFO_EXTENSION);
+
+        if ($type == 'php') {
+            return $this->statements_php($file, 'up');
+        }
+
         $all = file_get_contents($file);
 
         #list($upstr, $downstr) = explode("-- migrate:down", $all);
@@ -371,6 +394,11 @@ to_version - go up or down to this version
     }
 
     public function down_stmt($file) {
+        $type = pathinfo($file, \PATHINFO_EXTENSION);
+        if ($type == 'php') {
+            return $this->statements_php($file, 'down');
+        }
+
         $all = file_get_contents($file);
 
         $downstr = trim(strstr($all, "-- migrate:down")); // alles nach migrate:down
@@ -426,6 +454,10 @@ to_version - go up or down to this version
     }
 
     public function initialize_if_not_already() {
+        if ($this->auto_answer) {
+            $this->init();
+            return true;
+        }
         if (!$this->is_initialized()) {
             print "not yet initialized" . ($this->prefix ? " (with prefix " . $this->prefix . ")" : "") . "\n";
             print "do you want to initialize now? [yn]\n";
@@ -441,7 +473,7 @@ to_version - go up or down to this version
         return true;
     }
 
-    private function get_migration_file($key){
+    private function get_migration_file($key) {
         $files = glob($this->dir . $key . '_*');
         if (count($files) > 1) {
             throw new Exception("multiple files with the same key {$key}??");

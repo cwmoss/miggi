@@ -15,10 +15,14 @@ final class MigrationTest extends TestCase {
     public $db;
 
     function get_miggi($args): miggi {
-        unset($this->db, $this->pdo);
-        unlink("{$this->output_directory}/unit.db");
-
         $this->output_directory = __DIR__ . '/_output';
+
+        print "unset";
+        unset($this->db, $this->pdo);
+        print "++ remove";
+        unlink("{$this->output_directory}/unit.db");
+        print "++ start";
+
         // `rm -rf {$this->output_directory}/*`;
         // $this->pdo = new PDO("sqlite:{$this->output_directory}/unit.db");
         $this->pdo = pdox::new_sqlite("{$this->output_directory}/unit.db");
