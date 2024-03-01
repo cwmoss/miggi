@@ -92,80 +92,46 @@ to_version - go up or down to this version
             return $result;
         }
 
-        $files = glob($this->dir . $key . '_*');
-        if (count($files) > 1) {
-            #throw new Exception("multiple files with the same key {$key}??");
-            $result->msg .= "multiple files with the same key {$key}??\n";
+        try{
+            $file = $this->get_migration_file($key);
+        } catch (Exception $e){
+            $result->msg .= $e->getMessage()."\n";
             return $result;
-        } else if (count($files) < 1) {
-            $result->msg .= "no migration file for key {$key} found\n";
-            return $result;
-            #throw new Exception("no migration file for key {$key} found");
-            #$err = "no migration file for key {$key} found\n";
-            #print $err;
-            #return false;
+        }
+        
+        if ($direction === "up") {
+            $stmt = $this->up_stmt($file);
+        } else if ($direction === "down") {
+            $stmt = $this->down_stmt($file);
         } else {
-            if ($direction === "up") {
-                $stmt = $this->up_stmt($files[0]);
-            } else if ($direction === "down") {
-                $stmt = $this->down_stmt($files[0]);
+            $result->msg .= "direction parameter must be 'up' or 'down'\n";
+            return $result;
+        }
+
+        #print $stmt."\n";
+
+        if (!$stmt) {
+            $result->msg .= "not a valid statement\n";
+            return $result;
+        }
+
+        $res = $this->db->execute($stmt);
+        if ($res !== false) {
+
+            $io = $direction=='up'?'in':'out';
+            $result->msg .=  "checking {$io} version {$key}\n";
+            $checkf = "check".$io;
+            $checkin_result = $this->db->$checkf($key);
+            if ($checkin_result == false) {
+                // migration gemacht, schema_migrations aber nicht aktualisiert 
+                $result->msg .= "fehler beim check{$io}\n";
+                return $result;
             } else {
-                $result->msg .= "direction parameter must be 'up' or 'down'\n";
-                return $result;
-                #$err = "direction parameter must be 'up' or 'down'\n";
-                #print $err;
+                $result->success = true;
             }
 
-            #print $stmt."\n";
-
-            if (!$stmt) {
-                $result->msg .= "not a valid statement\n";
-                return $result;
-                #$err = "not a valid statement\n";
-                #print $err;
-                #return false;
-            }
-
-            $res = $this->db->execute($stmt);
-            if ($res !== false) {
-
-                if ($direction === "up") {
-                    $result->msg .=  "checking in version {$key}\n";
-                    $check_in_result = $this->db->checkin($key);
-                    if ($check_in_result == false) {
-                        // migration eingefügt, schema_migrations aber nicht aktualisiert 
-                        $result->msg .= "fehler beim checkin\n";
-                        return $result;
-                        #print $err;
-                        #return false;
-                    } else {
-                        $result->success = true;
-                    }
-                } else {
-                    $result->msg .=  "checking out version {$key}\n";
-                    $check_out_result = $this->db->checkout($key);
-                    if ($check_out_result == false) {
-                        // migration entfernt, schema_migrations aber nicht aktualisiert 
-                        $result->msg .= "fehler beim checkout\n";
-                        return $result;
-                        #$err = "fehler beim checkout\n";
-                        #print $err;
-
-                        #return false;
-                    } else {
-                        $result->success = true;
-                    }
-                }
-                #$result->success = true;
-                return $result;
-                #return $key;
-            } else {
-                #$err = "fehler bei der migration\n";
-                #print $err;
-                #return false;
-                $result->msg .= "fehler bei der migration\n";
-                return $result;
-            }
+            return $result;
+            
         }
     }
 
@@ -197,10 +163,6 @@ to_version - go up or down to this version
                 }
             }
         }
-        // if (!$res->success) {
-        //     print $res->msg;
-        // }
-        // print_r ($appliedkeys);
 
         if ($stats == true) {
             if (count($appliedkeys)) {
@@ -255,7 +217,7 @@ to_version - go up or down to this version
 
         $latest = $this->latest();
         if ($latest == $key) {
-            print "up to date";
+            print "up to date\n";
             return $all;
         }
         print "key: " . $key . " - latest: " . $latest . "\n";
@@ -477,6 +439,17 @@ to_version - go up or down to this version
             }
         }
         return true;
+    }
+
+    private function get_migration_file($key){
+        $files = glob($this->dir . $key . '_*');
+        if (count($files) > 1) {
+            throw new Exception("multiple files with the same key {$key}??");
+        } else if (count($files) < 1) {
+            throw new Exception("no migration file for key {$key} found");
+        } else {
+            return $files[0];
+        }
     }
 
 
