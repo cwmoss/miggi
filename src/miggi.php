@@ -449,8 +449,8 @@ to_version - go up or down to this version
 
 
     public function is_initialized() {
-        $tn = ($this->opts['prefix'] ?? "" ? $this->opts['prefix'] . "_" : "") . "schema_migrations";
-        return $this->db->table_exists($tn);
+        // $tn = ($this->opts['prefix'] ?? "" ? $this->opts['prefix'] . "_" : "") . "schema_migrations";
+        return $this->db->table_exists($this->db->table);
     }
 
     public function initialize_if_not_already() {
