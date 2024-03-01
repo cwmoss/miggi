@@ -25,7 +25,7 @@ class db {
     }
 
     public function checkout($key) {
-        return $this->pdo->delete($this->table, 'version=?', [$key]);
+        return $this->pdo->delete($this->table, 'WHERE version=?', [$key]);
         # $query = $this->create_checkout_statement($key);
         # return $this->pdo->exec($query);
     }
