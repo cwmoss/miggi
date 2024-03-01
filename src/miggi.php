@@ -9,7 +9,12 @@ class miggi {
     public string $prefix;
     public string $prefix_placeholder_regex;
 
-    public function __construct(public db $db, public string $dir, public array $opts, public array $switches) {
+    public function __construct(
+        public db $db, 
+        public string $dir, 
+        public array $opts, 
+        public array $switches
+    ) {
         #print "miggi opts\n";
         #print_r($this->opts);
         $this->prefix = $this->opts['prefix'] ?? "";
@@ -191,9 +196,9 @@ to_version - go up or down to this version
                 }
             }
         }
-        if (!$res->success) {
-            print $res->msg;
-        }
+        // if (!$res->success) {
+        //     print $res->msg;
+        // }
         // print_r ($appliedkeys);
 
         if ($stats == true) {
@@ -307,6 +312,9 @@ to_version - go up or down to this version
         return [$available, $applied];
     }
 
+    /*
+    returns list of migration-objects
+    */
     public function fetch_available() {
         $candidates = glob($this->dir . '/*.sql');
 
@@ -324,6 +332,7 @@ to_version - go up or down to this version
 
         return $candidates;
     }
+
 
     public function fetch_applied() {
         // return ["20230320172951", "20230322155900"];
