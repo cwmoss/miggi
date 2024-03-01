@@ -42,7 +42,7 @@ final class MigrationTest extends TestCase {
         // $this->assertSame(4, count($res));
         $total = $this->pdo->fetch_first_cell('SELECT count(version) as total from schema_migrations');
         $this->assertSame(4, $total);
-        return;
+
         $res = $miggi->down();
         $res = $miggi->down();
         $res = $miggi->down();
