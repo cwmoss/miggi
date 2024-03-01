@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use miggi\db;
+use miggi\logger;
 use PHPUnit\Framework\TestCase;
 use miggi\miggi;
 use miggi\pdox;
@@ -21,6 +22,7 @@ final class MigrationTest extends TestCase {
         // `rm -rf {$this->output_directory}/*`;
         // $this->pdo = new PDO("sqlite:{$this->output_directory}/unit.db");
         $this->pdo = pdox::new_sqlite("{$this->output_directory}/unit.db");
+        $this->pdo->logger = new logger();
         $this->db = new db($this->pdo);
         $miggi = new miggi($this->db, __DIR__ . '/migrations/sqlite', [], []);
         return $miggi;
@@ -37,12 +39,15 @@ final class MigrationTest extends TestCase {
     public function testAll(): void {
         $miggi = $this->get_miggi("");
         $res = $miggi->up();
-        $this->assertSame(4, count($res));
+        // $this->assertSame(4, count($res));
+        $total = $this->pdo->fetch_first_cell('SELECT count(version) as total from schema_migrations');
+        $this->assertSame(4, $total);
+
         $res = $miggi->down();
         $res = $miggi->down();
         $res = $miggi->down();
         $res = $miggi->down();
         $total = $this->pdo->fetch_first_cell('SELECT count(*) as total from schema_migrations');
-        $this->assertSame("0", $total);
+        $this->assertSame(0, $total);
     }
 }
