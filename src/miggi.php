@@ -3,6 +3,7 @@
 namespace miggi;
 
 use Exception;
+use InvalidArgumentException;
 
 class miggi {
 
@@ -84,63 +85,37 @@ to_version - go up or down to this version
     einzelne migration ausführen
     private function
     */
-    private function one($key, $direction) {
-
-        $result = new miggi_result("{$key} ({$direction}) - ausführen\n", [$key], false);
-
-        # print "{$key} ({$direction}) - ausführen\n";
+    private function one($key, $direction): bool {
 
         if (!$this->check_key($key)) {
-            $result->msg .= "not a valid key\n";
-            return $result;
+            throw new InvalidArgumentException("not a valid key {$key}");
         }
 
-        try {
-            $file = $this->get_migration_file($key);
-        } catch (Exception $e) {
-            $result->msg .= $e->getMessage() . "\n";
-            return $result;
-        }
+        $file = $this->get_migration_file($key);
 
-        if ($direction === "up") {
-            $stmt = $this->up_stmt($file);
-        } else if ($direction === "down") {
-            $stmt = $this->down_stmt($file);
-        } else {
-            $result->msg .= "direction parameter must be 'up' or 'down'\n";
-            return $result;
-        }
+        $this->db->pdo->beginTransaction();
+
+        $stmt = match ($direction) {
+            "up" => $this->up_stmt($file),
+            "down" => $this->down_stmt($file)
+        };
 
         #print $stmt."\n";
 
         if (!$stmt) {
-            $result->msg .= "not a valid statement\n";
-            return $result;
+            throw new InvalidArgumentException("no statements found in migration file {$file}");
         }
+
         if (!is_array($stmt)) $stmt = [$stmt];
-        print("++ one, statements");
-        print_r($stmt);
 
         foreach ($stmt as $s) {
-            $res = $this->db->execute($s);
-            if ($res === false) break;
+            $this->db->execute($s);
         }
-        if ($res !== false) {
 
-            $io = $direction == 'up' ? 'in' : 'out';
-            $result->msg .=  "checking {$io} version {$key}\n";
-            $checkf = "check" . $io;
-            $checkin_result = $this->db->$checkf($key);
-            if ($checkin_result == false) {
-                // migration gemacht, schema_migrations aber nicht aktualisiert 
-                $result->msg .= "fehler beim check{$io}\n";
-                return $result;
-            } else {
-                $result->success = true;
-            }
-
-            return $result;
-        }
+        $checkf = "check" . ($direction == 'up' ? 'in' : 'out');
+        $this->db->$checkf($key);
+        $this->db->pdo->commit();
+        return true;
     }
 
 
@@ -161,13 +136,9 @@ to_version - go up or down to this version
 
                 print "{$appmig->key} - ausführen $file\n";
 
-                $res = $this->one($appmig->key, "up"); // returns miggi_result --migration key--
-                if ($res->success) {
-                    $appliedkeys[] = $res->keys[0];
-                } else {
-                    $res->msg .= "upgrading stopped - refer to above errors\n";
-                    #$err = "upgrading stopped - refer to above errors\n";
-                    break;
+                $res = $this->one($appmig->key, "up");
+                if ($res === true) {
+                    $appliedkeys[] = $appmig->key;
                 }
             }
         }
@@ -184,12 +155,13 @@ to_version - go up or down to this version
     }
 
     // remove last applied migration
-    public function down($stats = false) {
+    public function down(bool $stats = false): miggi_result {
 
         if (!$this->initialize_if_not_already()) {
             return "operation canceled\n";
         }
 
+        $result = new miggi_result("ok");
         $applied = $this->fetch_applied();
 
         if (count($applied) == 0) {
@@ -201,15 +173,10 @@ to_version - go up or down to this version
 
         $res = $this->one($key, "down"); // returns migration key
 
-        if ($stats == true) {
-            if ($res->success) {
-                return ($this->status());
-            } else {
-                print $res->msg;
-                return "not able to migrate down";
-            }
+        if ($stats === true) {
+            return ($this->status());
         } else {
-            return $res;
+            return $result;
         }
     }
 
