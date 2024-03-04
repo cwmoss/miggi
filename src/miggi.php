@@ -100,8 +100,6 @@ to_version - go up or down to this version
             "down" => $this->down_stmt($file)
         };
 
-        #print $stmt."\n";
-
         if (!$stmt) {
             throw new InvalidArgumentException("no statements found in migration file {$file}");
         }
@@ -115,16 +113,21 @@ to_version - go up or down to this version
         $checkf = "check" . ($direction == 'up' ? 'in' : 'out');
         $this->db->$checkf($key);
         $this->db->pdo->commit();
+        
         return true;
+
     }
 
 
 
     // alle anstehenden migrationen ausführen
-    public function up($stats = false) {
+    public function up(): miggi_result {
+
+        $result = new miggi_result("applying all pending migrations\n");
 
         if (!$this->initialize_if_not_already()) {
-            return "operation canceled\n";
+            $result->msg .= "operation canceled\n";
+            return $result;
         }
 
         $available = $this->status();
@@ -133,115 +136,96 @@ to_version - go up or down to this version
         foreach ($available as $appmig) {
             if ($appmig->status === "pending") {
                 $file = $this->dir . $appmig->file;
-
-                print "{$appmig->key} - ausführen $file\n";
-
-                $res = $this->one($appmig->key, "up");
-                if ($res === true) {
-                    $appliedkeys[] = $appmig->key;
-                }
+                $result->msg .= "{$appmig->key} - ausführen $file\n";
+                $this->one($appmig->key, "up");
+                $appliedkeys[] = $appmig->key;
             }
         }
 
-        if ($stats == true) {
-            if (count($appliedkeys)) {
-                return ($this->fetch_by_keys($appliedkeys));
-            } else {
-                return "no applicable migrations found\n";
-            }
+        if (count($appliedkeys)) {
+            // return applied migrations
+            // optinal alle (status)
+            $result->migrations =  ($this->fetch_by_keys($appliedkeys));
+            $result->success = true;
         } else {
-            return true;
+            $result->msg .= "no applicable migrations found\n";
         }
+
+        return $result;
+    
     }
 
     // remove last applied migration
-    public function down(bool $stats = false): miggi_result {
+    public function down(): miggi_result {
+
+        $result = new miggi_result("removing last applied migration\n");
 
         if (!$this->initialize_if_not_already()) {
-            return "operation canceled\n";
+            $result->msg .= "operation canceled\n";
+            return $result;
         }
-
-        $result = new miggi_result("ok");
+        
         $applied = $this->fetch_applied();
 
         if (count($applied) == 0) {
-            return "not able to migrate down - no more applied migrations\n";
+            $result->msg .= "not able to migrate down - no more applied migrations\n";
+            return $result;
         }
 
         $key = end($applied);
-        print "migration {$key} entfernen \n";
+        $result->msg .= "migration {$key} entfernen \n";
 
-        $res = $this->one($key, "down"); // returns migration key
-
-        if ($stats === true) {
-            return ($this->status());
-        } else {
-            return $result;
-        }
+        $this->one($key, "down");
+        $result->migrations = $this->status();
+        return $result;
+        
     }
 
     public function to_version($key) {
 
+        $result = new miggi_result("migrating to version {$key}\n");
+
         $all = $this->status();
-        $appliedkeys = [];
+
+        $result->migrations = $all;
 
         if (!$this->check_key($key)) {
-            print "not a valid key\n";
-            return $all;
+            $result->msg .= "not a valid key\n";
+            return $result;
         }
 
         $latest = $this->latest();
         if ($latest == $key) {
-            print "up to date\n";
-            return $all;
-        }
-        print "key: " . $key . " - latest: " . $latest . "\n";
-
-
-        if ($key > $latest) { //up
-            print "migrate up\n";
+            $result->msg .=  "up to date\n";
+            return $result;
+        } else if ($key > $latest) { //up
+            $result->msg .= "migrate up\n";
             foreach ($all as $i => $mig) {
+                $mig->status = "applied";
                 if ($mig->key <= $latest || $mig->key > $key) {
                     unset($all[$i]);
-                }
+                } 
             }
-            $all = array_map(function ($m) {
-                $m->status = "applying";
-                return $m;
-            }, $all);
             $direction = "up";
         } else { //down
-            print "rollback down\n";
+            $result->msg .= "migrate down\n";
             foreach ($all as $i => $mig) {
+                $mig->status = "applied";
                 if ($mig->key <= $key || $mig->key > $latest) {
                     unset($all[$i]);
-                }
+                } 
             }
             $all = array_reverse($all);
-            $all = array_map(function ($m) {
-                $m->status = "rolling back";
-                return $m;
-            }, $all);
             $direction = "down";
         }
 
         foreach ($all as $mig) {
-            $res = $this->one($mig->key, $direction);
-            $appliedkeys[] = $res->keys[0];
+            $this->one($mig->key, $direction);
         }
 
-        #print $appliedkeys;
+        $result->migrations =  $all; // $this->status(); //$this->fetch_by_keys($appliedkeys);
+        return $result;
 
-        return $all;
-
-        /*
-        [0,1,2,3,4]
-        key = 3, latest = 1 -> up from >1 bis 3
-
-        
-        key = 2, latest = 4 -> down from 4 to >2
-        [0,1,2,3,4] -> [4,3,2,1,0]
-        */
     }
 
     // status:
