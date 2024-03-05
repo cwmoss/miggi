@@ -36,7 +36,7 @@ class miggi {
         return $res === 0;
     }
 
-    public function status() {
+    public function status( $limit = null ) {
 
         if (!$this->is_initialized()) {
             return "not yet initialized" . ($this->prefix ? " (with prefix " . $this->prefix . ")" : "") . "\n";
@@ -55,6 +55,13 @@ class miggi {
             #print_r($appmig);
         }
 
+        if($limit){
+            $limit = abs($limit);
+            $max = count($available);
+            $limit = ($limit>$max?$max:$limit);
+            print "LIMIT:" . $limit;
+            $available = array_slice( $available, -$limit, null, true );
+        }
         return $available;
         #return $this->merged($available, $applied);
     }
@@ -176,7 +183,8 @@ to_version - go up or down to this version
         $result->msg .= "migration {$key} entfernen \n";
 
         $this->one($key, "down");
-        $result->migrations = $this->status();
+        $result->migrations = $this->fetch_by_keys([$key]);//$this->status();
+        $result->migrations[0]->status = "removed";
         return $result;
         
     }
@@ -223,6 +231,7 @@ to_version - go up or down to this version
             $this->one($mig->key, $direction);
         }
 
+        // return applied migrations
         $result->migrations =  $all; // $this->status(); //$this->fetch_by_keys($appliedkeys);
         return $result;
 

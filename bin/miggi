@@ -48,7 +48,7 @@ $miggi = new miggi($db, __DIR__ . $_ENV['MIGRATIONS_DIR'] ?? "/../migrations/", 
 
 $res = match (true) {
     $cli->command == 'init' => $miggi->init(),
-    $cli->command == 'status' => $miggi->status(),
+    $cli->command == 'status' => $miggi->status($cli->args[0]),
     $cli->command == 'new' => $miggi->new_migration(join('_', $cli->args)),
     $cli->command == 'up' => $miggi->up(),
     $cli->command == 'down' => $miggi->down(),
