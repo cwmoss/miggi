@@ -44,13 +44,13 @@ final class MigrationTest extends TestCase {
         $miggi = $this->get_miggi("");
         $res = $miggi->up();
         // $this->assertSame(4, count($res));
+        $totalfiles = count($miggi->status());
         $total = $this->pdo->fetch_first_cell('SELECT count(version) as total from schema_migrations');
-        $this->assertSame(4, $total);
+        $this->assertSame($totalfiles, $total);
 
-        $res = $miggi->down();
-        $res = $miggi->down();
-        $res = $miggi->down();
-        $res = $miggi->down();
+        for($i=0; $i<$totalfiles; $i++){
+            $res = $miggi->down();
+        }
         $total = $this->pdo->fetch_first_cell('SELECT count(*) as total from schema_migrations');
         $this->assertSame(0, $total);
 
@@ -84,9 +84,69 @@ final class MigrationTest extends TestCase {
         
         // testmigration entfernen
         $miggi->down();
-        foreach (glob($newfile) as $filename) {
-            #echo "$filename size " . filesize($filename) . "\n";
-            unlink($filename);
-        }
+        unlink($newfile);
+
+        $totalfiles = count($miggi->status());
+        $totalmigrations = $this->pdo->fetch_first_cell('SELECT count(*) as total from schema_migrations');
+        $this->assertSame($totalfiles, $totalmigrations);
+
     }
+
+    public function testBrokenMigration(): void {
+        $miggi = $this->get_miggi("");
+        $res = $miggi->up();
+        $totalbefore = $this->pdo->fetch_first_cell('SELECT count(*) as total from schema_migrations');
+        $totalfilesbefore = count($miggi->status());
+        $this->assertSame($totalbefore, $totalfilesbefore);
+        
+        // fehlerhafte migration erzeugen
+        $res = $miggi->new_migration("broken_migration");
+        $tpl = "
+            -- migrate:up
+            ALTER TABLE /*prefix*/ todos
+            ADD duplicateme int;
+            -- duplicate 
+            ALTER TABLE /*prefix*/ todos
+            ADD duplicateme int; 
+            
+            -- migrate:down
+            -- empty
+        ";
+        $newfile = trim($res);
+        file_put_contents($newfile, $tpl);
+
+        sleep(1);
+        $res2 = $miggi->new_migration("next_migration");
+        $tpl = "
+            -- migrate:up
+            ALTER TABLE /*prefix*/ todos
+            ADD next int;
+            
+            -- migrate:down
+            -- empty
+        ";
+        $newfile2 = trim($res2);
+        file_put_contents($newfile2, $tpl);
+
+        // migriere mit fehlerhafter migration
+        try{
+            $res = $miggi->up();
+        } catch(Exception $e){
+            $this->assertStringContainsString("duplicate column name: duplicateme", $e->getMessage());
+            #print "fehlerhafte migration: $newfile\n" . $e->getMessage() . "\n";
+            #print "nicht ausgeführt\n";
+        }
+        
+        $totalafter = $this->pdo->fetch_first_cell('SELECT count(*) as total from schema_migrations');
+        $this->assertSame($totalbefore, $totalafter); // keine migration sollte ausgeführt worden sein
+
+        $totalfiles = count($miggi->status());
+        $this->assertSame($totalfiles, ($totalafter + 2)); // zwei nicht ausgeführte migrationsfiles
+        
+        // aufräumen
+        unlink($newfile);
+        unlink($newfile2);
+
+    }
+
 }

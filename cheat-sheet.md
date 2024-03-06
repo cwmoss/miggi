@@ -103,13 +103,42 @@ AUTO_INCREMENT
 
 
 
+
+
+
+
 ## [datatypes](https://www.w3schools.com/sql/sql_datatypes.asp)
 
 
+### Compatibility
 
-(for mysql)
+The following types (or spellings thereof) are specified by SQL: 
+- bigint, 
+- bit, 
+- bit varying, 
+- boolean, 
+- char, 
+- character varying, 
+- character, 
+- varchar, 
+- date, 
+- double precision, 
+- integer, 
+- interval, 
+- numeric, 
+- decimal, 
+- real, 
+- smallint, 
+- time (with or without time zone), 
+- timestamp (with or without time zone), 
+- xml.
 
-### strings
+
+
+
+### mysql
+
+#### strings
 
 | type | description |
 | ------ | ----- |
@@ -128,7 +157,7 @@ AUTO_INCREMENT
 | ENUM(val1, val2, val3, ...)	| A string object that can have only one value, chosen from a list of possible values. You can list up to 65535 values in an ENUM list. If a value is inserted that is not in the list, a blank value will be inserted. The values are sorted in the order you enter them |
 | SET(val1, val2, val3, ...)	| A string object that can have 0 or more values, chosen from a list of possible values. You can list up to 64 values in a SET list |
 
-### numbers
+#### numbers
 
 | type | description |
 | ------ | ----- |
@@ -148,7 +177,7 @@ AUTO_INCREMENT
 | DECIMAL(size, d)	| An exact fixed-point number. The total number of digits is specified in size. The number of digits after the decimal point is specified in the d parameter. The maximum number for size is 65. The maximum number for d is 30. The default value for size is 10. The default value for d is 0.
 | DEC(size, d)	   |  Equal to DECIMAL(size,d)
 
-### dates
+#### dates
 
 | type | description |
 | ------ | ----- |
@@ -160,6 +189,55 @@ AUTO_INCREMENT
 
 
 
+
+
+### POSTGRES builtin datatypes
+
+|Name	                                |Aliases	        |      Description
+| ------                                | -----             | ----- |
+|bigint	                                |int8	            |   igned eight-byte integer
+|bigserial	                            |serial8	        |      autoincrementing eight-byte integer
+|bit [ (n) ]	 	                        |                   |   fixed-length bit string
+|bit varying [ (n) ]	                    |varbit [ (n) ]	    |   ariable-length bit string
+|boolean	                                |bool	            |   ogical Boolean (true/false)
+|box	 	                                |                   |   rectangular box on a plane
+|bytea	 	                            |                   |   binary data (“byte array”)
+|character [ (n) ]	                    |char [ (n) ]	    |   ixed-length character string
+|character varying [ (n) ]	            |varchar [ (n) ]	|      variable-length character string
+|cidr	 	                            |                   |   IPv4 or IPv6 network address
+|circle	 	                            |                   |   circle on a plane
+|date	 	                            |                   |   calendar date (year, month, day)
+|double precision	                    |float8	            |   ouble precision floating-point number (8 |bytes)            |
+|inet	 	                            |                   |   IPv4 or IPv6 host address
+|integer	                                |int, int4	        |   igned four-byte integer
+|interval [ fields ] [ (p) ]	            | 	                |   ime span
+|json	 	                            |                   |   textual JSON data
+|jsonb	 	                            |                   |   binary JSON data, decomposed
+|line	 	                            |                   |   infinite line on a plane
+|lseg	 	                            |                   |   line segment on a plane
+|macaddr	 	                            |                   |   MAC (Media Access Control) address
+|macaddr8	 	                        |                   |   MAC (Media Access Control) address |(EUI-64 format)          |
+|money	 	                            |                   |   currency amount
+|numeric [ (p, s) ]	                    |decimal [ (p, s) ]	|   xact numeric of selectable precision
+|path	 	                            |                   |   geometric path on a plane
+|pg_lsn	 	                            |                   |   PostgreSQL Log Sequence Number
+|pg_snapshot	 	                        |                   |   user-level transaction ID snapshot
+|point	 	                            |                   |   geometric point on a plane
+|polygon	 	                            |                   |   closed geometric path on a plane
+|real	                                |float4	            |   ingle precision floating-point number (4 |bytes)            |
+|smallint	                            |int2	            |   igned two-byte integer
+|smallserial	                            |serial2	        |      autoincrementing two-byte integer
+|serial	                                |serial4	        |      autoincrementing four-byte integer
+|text	 	                            |                   |   variable-length character string
+|time [ (p) ] [ without time zone ]	 	|                   |   time of day (no time zone)
+|time [ (p) ] with time zone	            |timetz	            |   ime of day, including time zone
+|timestamp [ (p) ] [ without time zone ]	| 	                |   ate and time (no time zone)
+|timestamp [ (p) ] with time zone	    |timestamptz	    |      date and time, including time zone
+|tsquery	 	                            |                   |   text search query
+|tsvector	 	                        |                   |   text search document
+|txid_snapshot	 	                    |                   |   user-level transaction ID snapshot |(deprecated; see pg_snapshot)|
+|uuid	 	                            |                   |   universally unique identifier
+|xml	 	                                |                   |   XML data
 
 
 
