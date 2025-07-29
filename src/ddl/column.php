@@ -8,7 +8,8 @@ class column {
 
     public function __construct(
         public string $name,
-        public string $type,
+        public type $type = type::string,
+        public ?int $size = null,
         public bool $pk = false,
         public bool $notnull = false,
         public mixed $default = null,
@@ -16,54 +17,19 @@ class column {
         public bool $auto = false,
         public bool $unique = false
     ) {
-        $this->parse_type($type);
     }
 
-    public string $parsed_type;
-    public ?int $size = null;
-
-    public function parse_type(string $type): void {
-        if (preg_match("/^(\w+)\((\d+)\)$/", $type, $mat)) {
-            $this->parsed_type = strtolower($mat[1]);
-            $this->size = $mat[2];
-        } elseif (preg_match("/^i(\d+)$/i", $type, $mat)) {
-            $this->parsed_type = 'i';
-            $this->size = $mat[1];
-        } else {
-            $this->parsed_type = strtolower($type);
-        }
-    }
-
-    public function sqlite_column_definition(array &$keys) {
-        $ddl = $this->name . " ";
-        $type = $this->sqlite_type();
-        $ddl .= $type;
-        if ($this->auto) {
-            $ddl .= " PRIMARY KEY AUTOINCREMENT";
-            if (count($keys) > 1) {
-                // print_r($keys);
-                throw new LogicException("can't have multiple keys with autoincrement feature");
-            } else {
-                $keys = [];
-            }
-        }
-        if ($this->notnull) {
-            $ddl .= " NOT NULL";
-        }
-        if ($this->default !== null) {
-            $ddl .= " DEFAULT \"$this->default\"";
-        }
-        if ($this->max) {
-            $ddl .= " CHECK(LENGTH($this->name)<=$this->max)";
-        }
-        return $ddl;
-    }
-
-    public function sqlite_type() {
-        return match ([$this->parsed_type, $this->size]) {
-            ['c', $this->size] => 'TEXT',
-            ['i', $this->size] => 'INTEGER',
-            ['t', $this->size] => 'TIMESTAMP'
+    public function set_specs(specs $spec, $args = null) {
+        match ($spec) {
+            specs::autoinc => $this->auto = true,
+            specs::default => $this->default = $args,
+            specs::maxlen => $this->max = $args,
+            specs::notnull => $this->notnull = true,
+            specs::unique => $this->unique = true,
+            specs::primary_key => $this->pk = true,
+            default => throw new LogicException("spec not implemented: " . json_encode($spec))
         };
+
+        return $this;
     }
 }

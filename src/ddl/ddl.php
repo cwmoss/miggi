@@ -6,17 +6,36 @@ use LogicException;
 
 class ddl {
 
+    public sqlite $driver;
+
     public function __construct(public string $driver_name) {
+        $this->driver = new sqlite;
     }
 
-    public function create_table($table, $cols) {
-        $cols = $this->parse_columns($cols);
-        $keys = array_reduce($cols, function ($res, $item) {
+    public function create_statement($statement) {
+        $ddl = match (true) {
+            $statement instanceof table => $this->create_table($statement),
+            is_array($statement) => call_user_func_array([$this, $statement[0]], $statement[1]),
+            default => "-- not implemented\n"
+        };
+        return $ddl;
+    }
+
+    public function drop_table($name) {
+        return "DROP TABLE $name";
+    }
+
+    public function rename_column($table, $old, $new) {
+        return "ALTER TABKE $table RENAME COLUMN FROM $old TO $new";
+    }
+
+    public function create_table(table $table) {
+        $keys = array_reduce($table->columns, function ($res, $item) {
             if ($item->pk) $res[] = $item->name;
             return $res;
         }, []);
-        $ddl = ['CREATE TABLE ' . $table . '('];
-        [$cols_ddl, $keys] = $this->sqlite_create_table($cols, $keys);
+        $ddl = ['CREATE TABLE ' . $table->name . '('];
+        [$cols_ddl, $keys] = $this->create_columns($table->columns, $keys);
         $ddl = array_merge($ddl, $cols_ddl);
         if ($keys) {
             $ddl[] = ",\n   PRIMARY KEY(" . join(", ", $keys) . ")";
@@ -26,42 +45,13 @@ class ddl {
     }
 
     /**
-     * @param colum[] $cols
+     * @param column[] $cols
      */
-    public function sqlite_create_table(array $cols, array $keys) {
+    public function create_columns(array $cols, array $keys) {
         $ddl = [];
         foreach ($cols as $col) {
-            $ddl[] = $col->sqlite_column_definition($keys);
+            $ddl[] = $this->driver->column_definition($col, $keys);
         }
         return [["  " . join(",\n  ", $ddl)], $keys];
-    }
-
-    public function parse_columns(string $cols) {
-        $cols = trim($cols);
-        $cols = rtrim($cols, ',');
-        $cols = explode(",\n", $cols);
-        $cols = array_map(fn ($c) => $this->parse_column($c), $cols);
-        print_r($cols);
-        return $cols;
-    }
-
-    public function parse_column(string $coltext) {
-        $col = array_merge(array_filter(explode(' ', $coltext), 'trim'));
-        $name = array_shift($col);
-        $type = array_shift($col);
-        $default =  $max = null;
-        $pk = $auto = $notnull = $unique = false;
-        while ($token = array_shift($col)) {
-            match (strtolower($token)) {
-                'key' => $pk = $token,
-                'notnull' => $notnull = true,
-                'auto' => $auto = true,
-                'unique' => $unique = true,
-                'max' => $max = array_shift($col),
-                'default' => $default = array_shift($col),
-                default => throw new LogicException("unrecognized column token >>$token<< in definition >>$coltext<<")
-            };
-        }
-        return new column($name, $type, $pk, $notnull, $default, $max, $auto, $unique);
     }
 }
