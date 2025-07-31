@@ -36,12 +36,14 @@ class ddl {
         }, []);
         $ddl = ['CREATE TABLE ' . $table->name . '('];
         [$cols_ddl, $keys] = $this->create_columns($table->columns, $keys);
-        $ddl = array_merge($ddl, $cols_ddl);
+
         if ($keys) {
-            $ddl[] = ",\n   PRIMARY KEY(" . join(", ", $keys) . ")";
+            // table ddl
+            $cols_ddl[] = "PRIMARY KEY(" . join(", ", $keys) . ")";
         }
+        $ddl[] = join(",\n  ", $cols_ddl);
         $ddl[] = ')';
-        return join("\n", $ddl);
+        return join("\n  ", $ddl);
     }
 
     /**
@@ -52,6 +54,6 @@ class ddl {
         foreach ($cols as $col) {
             $ddl[] = $this->driver->column_definition($col, $keys);
         }
-        return [["  " . join(",\n  ", $ddl)], $keys];
+        return [$ddl, $keys];
     }
 }

@@ -11,7 +11,7 @@ class sqlite extends driver {
         $type = $this->type($col);
         $ddl .= $type;
         if ($col->auto) {
-            $ddl .= " PRIMARY KEY AUTOINCREMENT";
+            $ddl .= " PRIMARY KEY AUTOINCREMENT NOT NULL"; # todo nn
             if (count($keys) > 1) {
                 // print_r($keys);
                 throw new LogicException("can't have multiple keys with autoincrement feature");
@@ -35,7 +35,8 @@ class sqlite extends driver {
         return match ([$col->type, $col->size]) {
             [type::string, $col->size] => 'TEXT',
             [type::number, $col->size] => 'INTEGER',
-            [type::datetime, $col->size] => 'TIMESTAMP'
+            [type::datetime, $col->size] => 'TIMESTAMP',
+            [type::timestamp, $col->size] => 'TIMESTAMP'
         };
     }
 }

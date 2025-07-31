@@ -8,6 +8,7 @@ enum type {
     case date;
     case datetime;
     case datetimezone;
+    case timestamp;
     case blob;
     case decimal;
 

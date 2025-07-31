@@ -72,13 +72,24 @@ class table {
     }
 
     public function parse_type(string $type): array {
+        $type = strtolower($type);
+        $size = null;
         if (preg_match("/^(\w+)\((\d+)\)$/", $type, $mat)) {
-            return [type::string, $mat[2]];
-        } elseif (preg_match("/^i(\d+)$/i", $type, $mat)) {
-            return [type::number, $mat[1]];
-        } else {
-            // TODO
-            return [type::number, null];
+            $type = $mat[1];
+            $size = $mat[2];
+        } elseif (preg_match("/^(\w+)(\d+)$/i", $type, $mat)) {
+            $type = $mat[1];
+            $size = $mat[2];
         }
+        // todo: more cases...
+        $type = match ($type) {
+            "c", "char", "varchar" => type::string,
+            "i", "int", "integer" => type::number,
+            "t" => type::timestamp,
+            "dt" => type::datetime,
+            "d" => type::date,
+            default => $type
+        };
+        return [$type, $size];
     }
 }

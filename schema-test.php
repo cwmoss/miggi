@@ -13,7 +13,7 @@ use function PHPSTORM_META\type;
 class migtest01 extends migration {
 
     public function up() {
-        $this->create_table("huhu", "
+        $this->create_table("test01", "
                 id I AUTO KEY,
                 ip c(40),
                 status I1 NOTNULL,
@@ -22,11 +22,21 @@ class migtest01 extends migration {
                 modified_at T,
         ");
 
-        $this->create_table("huhu02")
+        $this->create_table("test02", "
+                c_id I key,
+                d_id I key,
+                created_at T NOTNULL
+                ");
+        $this->create_table("test03")
             ->add_column("id", type::number, specs::autoinc, specs::notnull)
-            ->add_column("token", type::string);
-        $this->drop_table("test00");
+            ->add_column("token", type::string)
+            ->add_column("created_at", type::timestamp);
+        $this->drop_table("test04");
         $this->rename_column("users", "fname", "first_name");
+        $this->create_table("test05")
+            ->add_column("x_id", specs::primary_key, type::number)
+            ->add_column("y_id", specs::primary_key, type::number)
+            ->add_column("descr", type::string, 200);
     }
 }
 
