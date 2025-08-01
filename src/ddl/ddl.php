@@ -35,9 +35,9 @@ class ddl {
             return $res;
         }, []);
         $ddl = ['CREATE TABLE ' . $table->name . '('];
-        [$cols_ddl, $keys] = $this->create_columns($table->columns, $keys);
+        $cols_ddl = $this->create_columns($table->columns, $keys);
 
-        if ($keys) {
+        if ($keys && count($keys) > 1) {
             // table ddl
             $cols_ddl[] = "PRIMARY KEY(" . join(", ", $keys) . ")";
         }
@@ -54,6 +54,6 @@ class ddl {
         foreach ($cols as $col) {
             $ddl[] = $this->driver->column_definition($col, $keys);
         }
-        return [$ddl, $keys];
+        return $ddl;
     }
 }

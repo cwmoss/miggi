@@ -37,7 +37,26 @@ class migration {
     public function drop_table(string $name) {
         $this->statements[] = ["drop_table", [$name]];
     }
+    /*
+rename_table
+unrename_table
+alter_table
+add_column
+drop_column
+alter_column
+rename_column
+unrename_column
+create_index
+drop_index
 
+function index($tab, $cols){
+      if(preg_match("/,/", $cols)){
+         $cols=str_replace(" ", "", $cols);
+         $cols=str_replace(",", "_", $cols);
+      }
+      return $this->table($tab, true)."_idx_".$cols;
+   }
+*/
     public function rename_column(string $table, string $old, string $new) {
         $this->statements[] = ["rename_column", [$table, $old, $new]];
     }

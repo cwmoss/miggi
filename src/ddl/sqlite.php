@@ -6,29 +6,35 @@ use LogicException;
 
 class sqlite extends driver {
 
-    public function column_definition(column $col, array &$keys) {
-        $ddl = $col->name . " ";
+    public function column_definition(column $col, array $keys): string {
+        $ddl = [$col->name];
         $type = $this->type($col);
-        $ddl .= $type;
+        $ddl[] = $type;
         if ($col->auto) {
-            $ddl .= " PRIMARY KEY AUTOINCREMENT NOT NULL"; # todo nn
+            $ddl[] = "PRIMARY KEY AUTOINCREMENT NOT NULL"; # todo nn
             if (count($keys) > 1) {
                 // print_r($keys);
                 throw new LogicException("can't have multiple keys with autoincrement feature");
-            } else {
-                $keys = [];
             }
         }
-        if ($col->notnull) {
-            $ddl .= " NOT NULL";
+        if ($col->pk) {
+            if (count($keys) == 1 && !$col->auto) {
+                $ddl[] = "PRIMARY KEY";
+            }
+        }
+        if ($col->unique) {
+            $ddl[] = "UNIQUE";
+        }
+        if ($col->notnull && !$col->pk && !$col->auto) {
+            $ddl[] = "NOT NULL";
         }
         if ($col->default !== null) {
-            $ddl .= " DEFAULT \"$col->default\"";
+            $ddl[] = "DEFAULT \"$col->default\"";
         }
         if ($col->max) {
-            $ddl .= " CHECK(LENGTH($col->name)<=$col->max)";
+            $ddl[] = "CHECK(LENGTH($col->name)<=$col->max)";
         }
-        return $ddl;
+        return join(" ", $ddl);
     }
 
     public function type(column $col) {
