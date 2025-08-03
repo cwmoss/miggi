@@ -33,8 +33,9 @@ class ddl {
         return "ALTER TABLE $table RENAME COLUMN FROM $old TO $new";
     }
 
-    public function add_column(string $table, string $name) {
-        return "ALTER TABLE $table ADD COLUMN $name";
+    public function add_column(table $table) {
+        $def = $this->driver->column_definition($table->columns[0], []);
+        return "ALTER TABLE $table->name ADD COLUMN $def";
     }
     public function drop_column(string $table, string $name) {
         return "ALTER TABLE $table DROP COLUMN $name";

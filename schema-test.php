@@ -37,6 +37,8 @@ class migtest01 extends migration {
             ->add_column("x_id", specs::primary_key, type::number)
             ->add_column("y_id", specs::primary_key, type::number)
             ->add_column("descr", type::string, 200);
+        $this->add_column("users", "email c(200)");
+        $this->add_column("users", "email2", specs::notnull, type::string, 150);
     }
 }
 

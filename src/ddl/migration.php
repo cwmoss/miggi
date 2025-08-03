@@ -26,7 +26,7 @@ class migration {
             if (is_string($statement)) $ddl[] = $statement;
             else $ddl[] = $this->ddl->make_statement($statement);
         }
-        print_r($this);
+        // print_r($this);
         return $ddl;
     }
 
@@ -56,21 +56,16 @@ class migration {
         $this->statements[] = ["rename_table", [$newname, $oldname]];
     }
 
-
-    /*
-
-function index($tab, $cols){
-      if(preg_match("/,/", $cols)){
-         $cols=str_replace(" ", "", $cols);
-         $cols=str_replace(",", "_", $cols);
-      }
-      return $this->table($tab, true)."_idx_".$cols;
-   }
-*/
-
-    public function add_column(string $table, string $name) {
-        $this->statements[] = ["add_column", [$table, $name]];
+    public function add_column(string $table, string $name_w_defs, ...$defs) {
+        $table = new table($this->table_name($table));
+        if (!$defs) {
+            $table->add_colums_from_text_definitions($name_w_defs);
+        } else {
+            $table->add_column($name_w_defs, ...$defs);
+        }
+        $this->statements[] = ["add_column", [$table]];
     }
+
     public function drop_column(string $table, string $name) {
         $this->statements[] = ["drop_column", [$table, $name]];
     }
