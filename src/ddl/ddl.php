@@ -12,7 +12,7 @@ class ddl {
         $this->driver = new sqlite;
     }
 
-    public function create_statement($statement) {
+    public function make_statement($statement) {
         $ddl = match (true) {
             $statement instanceof table => $this->create_table($statement),
             is_array($statement) => call_user_func_array([$this, $statement[0]], $statement[1]),
@@ -25,8 +25,32 @@ class ddl {
         return "DROP TABLE $name";
     }
 
+    public function rename_table($old, $new) {
+        return "ALTER TABLE $old RENAME TO $new";
+    }
+
     public function rename_column($table, $old, $new) {
-        return "ALTER TABKE $table RENAME COLUMN FROM $old TO $new";
+        return "ALTER TABLE $table RENAME COLUMN FROM $old TO $new";
+    }
+
+    public function add_column(string $table, string $name) {
+        return "ALTER TABLE $table ADD COLUMN $name";
+    }
+    public function drop_column(string $table, string $name) {
+        return "ALTER TABLE $table DROP COLUMN $name";
+    }
+
+    public function alter_column(string $table, string $name) {
+        return "ALTER TABLE $table ALTER COLUMN $name";
+    }
+
+    public function create_index(string $table, string $name, array $cols, string $type = "") {
+        $cols = join(", ", $cols);
+        return "CREATE $type INDEX $name ON $table ($cols)";
+    }
+
+    public function drop_index(string $table, string $name, array $cols) {
+        return "DROP INDEX $name ON $table";
     }
 
     public function create_table(table $table) {

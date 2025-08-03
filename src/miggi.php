@@ -36,7 +36,7 @@ class miggi {
         return $res === 0;
     }
 
-    public function status( $limit = null ) {
+    public function status($limit = null) {
 
         if (!$this->is_initialized()) {
             return "not yet initialized" . ($this->prefix ? " (with prefix " . $this->prefix . ")" : "") . "\n";
@@ -55,12 +55,12 @@ class miggi {
             #print_r($appmig);
         }
 
-        if($limit){
+        if ($limit) {
             $limit = abs($limit);
             $max = count($available);
-            $limit = ($limit>$max?$max:$limit);
+            $limit = ($limit > $max ? $max : $limit);
             print "LIMIT:" . $limit;
-            $available = array_slice( $available, -$limit, null, true );
+            $available = array_slice($available, -$limit, null, true);
         }
         return $available;
         #return $this->merged($available, $applied);
@@ -120,9 +120,8 @@ to_version - go up or down to this version
         $checkf = "check" . ($direction == 'up' ? 'in' : 'out');
         $this->db->$checkf($key);
         $this->db->pdo->commit();
-        
-        return true;
 
+        return true;
     }
 
 
@@ -159,7 +158,6 @@ to_version - go up or down to this version
         }
 
         return $result;
-    
     }
 
     // remove last applied migration
@@ -171,7 +169,7 @@ to_version - go up or down to this version
             $result->msg .= "operation canceled\n";
             return $result;
         }
-        
+
         $applied = $this->fetch_applied();
 
         if (count($applied) == 0) {
@@ -183,10 +181,9 @@ to_version - go up or down to this version
         $result->msg .= "migration {$key} entfernen \n";
 
         $this->one($key, "down");
-        $result->migrations = $this->fetch_by_keys([$key]);//$this->status();
+        $result->migrations = $this->fetch_by_keys([$key]); //$this->status();
         $result->migrations[0]->status = "removed";
         return $result;
-        
     }
 
     public function to_version($key) {
@@ -212,7 +209,7 @@ to_version - go up or down to this version
                 $mig->status = "applied";
                 if ($mig->key <= $latest || $mig->key > $key) {
                     unset($all[$i]);
-                } 
+                }
             }
             $direction = "up";
         } else { //down
@@ -221,7 +218,7 @@ to_version - go up or down to this version
                 $mig->status = "applied";
                 if ($mig->key <= $key || $mig->key > $latest) {
                     unset($all[$i]);
-                } 
+                }
             }
             $all = array_reverse($all);
             $direction = "down";
@@ -232,9 +229,8 @@ to_version - go up or down to this version
         }
 
         // return applied migrations
-        $result->migrations =  $all; // $this->status(); //$this->fetch_by_keys($appliedkeys);
+        $result->migrations = $all; // $this->status(); //$this->fetch_by_keys($appliedkeys);
         return $result;
-
     }
 
     // status:
@@ -317,11 +313,21 @@ to_version - go up or down to this version
 
     public function statements_php(string $file, string $direction) {
         [$key, $name] = explode('_', basename($file, '.php'), 2);
-        $clasn = "miggi\\migrations\\$name";
-        include($file);
+        // $clasn = "miggi\\migrations\\$name";
+        // include($file);
+        $clasn = self::find_class_in_file($file);
         $m = new $clasn($this->driver_name, $this->prefix);
-        $m->$direction();
+        $m->run($direction == "down");
         return $m->ddl;
+    }
+
+    // https://stackoverflow.com/questions/7153000/get-class-name-from-file
+    static function find_class_in_file(string $file) {
+        $classes = get_declared_classes();
+        include $file;
+        $diff = array_diff(get_declared_classes(), $classes);
+        $class = reset($diff);
+        return $class;
     }
 
     public function up_stmt($file) {

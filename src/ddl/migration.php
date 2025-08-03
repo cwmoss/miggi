@@ -11,18 +11,28 @@ class migration {
 
     public ddl $ddl;
 
-    public function __construct(public string $name) {
-        $this->ddl = new ddl("sqlite");
+    public function __construct(public string $driver_name, public string $prefix = "") {
+        $this->ddl = new ddl($driver_name);
     }
 
-    public function run() {
-        $this->up();
+    public function run($down = false) {
+        if ($down) {
+            $this->down();
+        } else {
+            $this->up();
+        }
         $ddl = [];
         foreach ($this->statements as $statement) {
-            $ddl[] = $this->ddl->create_statement($statement);
+            if (is_string($statement)) $ddl[] = $statement;
+            else $ddl[] = $this->ddl->make_statement($statement);
         }
         print_r($this);
         return $ddl;
+    }
+
+    // raw ddl statement, supports %TABLE% prefix
+    public function ddl(string $table, string $ddl) {
+        $this->statements[] = str_replace("%TABLE%", $this->table_name($table), $ddl);
     }
 
     public function create_table(string $name, ?string $definitions = null): table {
@@ -37,17 +47,17 @@ class migration {
     public function drop_table(string $name) {
         $this->statements[] = ["drop_table", [$name]];
     }
+
+    public function rename_table(string $oldname, string $newname) {
+        $this->statements[] = ["rename_table", [$oldname, $newname]];
+    }
+
+    public function unrename_table(string $oldname, string $newname) {
+        $this->statements[] = ["rename_table", [$newname, $oldname]];
+    }
+
+
     /*
-rename_table
-unrename_table
-alter_table
-add_column
-drop_column
-alter_column
-rename_column
-unrename_column
-create_index
-drop_index
 
 function index($tab, $cols){
       if(preg_match("/,/", $cols)){
@@ -57,8 +67,60 @@ function index($tab, $cols){
       return $this->table($tab, true)."_idx_".$cols;
    }
 */
+
+    public function add_column(string $table, string $name) {
+        $this->statements[] = ["add_column", [$table, $name]];
+    }
+    public function drop_column(string $table, string $name) {
+        $this->statements[] = ["drop_column", [$table, $name]];
+    }
+
+    public function alter_column(string $table, string $name) {
+        $this->statements[] = ["alter_column", [$table, $name]];
+    }
+
     public function rename_column(string $table, string $old, string $new) {
         $this->statements[] = ["rename_column", [$table, $old, $new]];
+    }
+
+    public function unrename_column(string $table, string $old, string $new) {
+        $this->statements[] = ["rename_column", [$table, $old, $new]];
+    }
+
+    public function create_index(string $table, string|array $cols, string $type = "", string $index_name = "") {
+        $cols = $this->cols($cols);
+        if (!$index_name) $index_name = $this->index_name($table, $cols);
+        $type = strtoupper($type);
+        if ($type && $type != "UNIQUE") {
+            throw new LogicException("index type not supported. only UNIQUE is supported.");
+        }
+        $this->statements[] = ["create_index", [$table, $index_name, $cols, $type]];
+    }
+
+    public function drop_index(string $table, string|array $cols, string $index_name = "") {
+        $cols = $this->cols($cols);
+        if (!$index_name) $index_name = $this->index_name($table, $cols);
+        $this->statements[] = ["drop_index", [$table, $index_name, $cols]];
+    }
+
+    public function table_name(string $name, bool $shorten = false) {
+        // legacy option to shorten long table names
+        if ($shorten) {
+            $name = join("", array_map(fn($part) => substr($part, 0, 3), explode("_", $name)));
+        }
+        if ($this->prefix) $name = $this->prefix . "_" . $name;
+        return $name;
+    }
+
+    private function cols(string|array $cols): array {
+        if (is_array($cols)) return $cols;
+        $cols = explode(",", $cols);
+        return array_map(fn($c) => trim($c), $cols);
+    }
+
+    private function index_name(string $table, string|array $cols) {
+        $cols = $this->cols($cols);
+        return $this->table_name($table) . "_idx_" . $cols;
     }
     public function up() {
     }
