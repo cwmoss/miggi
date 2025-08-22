@@ -9,7 +9,7 @@ class db {
 
     public string $table = 'schema_migrations';
 
-    public function __construct(public pdox $pdo, public String $prefix = "") {
+    public function __construct(public pdox $pdo, public string $prefix = "") {
         // if ($prefix) $this->table = $prefix . "_" . $this->table;
     }
 
