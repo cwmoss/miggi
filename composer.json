@@ -4,12 +4,12 @@
             "miggi\\": "src/"
         }
     },
-    "name": "rw/miggi",
+    "name": "cwmoss/miggi",
     "scripts": {
         "test": [
             "vendor/bin/phpunit tests"
         ],
-        "analyze": "vendor/bin/phpstan analyse src tests --memory-limit 1G -l 5"
+        "analyze": "vendor/bin/phpstan analyse --memory-limit 1G -l 5"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",

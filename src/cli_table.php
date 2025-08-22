@@ -30,7 +30,7 @@ class cli_table {
 
     public array $rows = [];
 
-    public function __construct($data, $headers, $opts = []) {
+    public function __construct($data, $headers, public array $opts = []) {
         list($data, $headers) = $this->normalize_data($data, $headers);
         $this->rows = $this->getTableRows($data, $headers);
     }

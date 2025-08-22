@@ -86,7 +86,7 @@ class pdox extends PDO {
         string $prefix = ""
     ): self {
         $parts = parse_url($url);
-        dbg("pdox new from url", $url, $pdo_options, $parts, $prefix);
+        // dbg("pdox new from url", $url, $pdo_options, $parts, $prefix);
         $opts = [];
         if ($parts['query'] ?? null) parse_str($parts['query'], $opts);
         $scheme = $parts['scheme'];

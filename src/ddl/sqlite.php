@@ -42,7 +42,8 @@ class sqlite extends driver {
             [type::string, $col->size] => 'TEXT',
             [type::number, $col->size] => 'INTEGER',
             [type::datetime, $col->size] => 'TIMESTAMP',
-            [type::timestamp, $col->size] => 'TIMESTAMP'
+            [type::timestamp, $col->size] => 'TIMESTAMP',
+            default => 'TEXT'
         };
     }
 }

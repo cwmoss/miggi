@@ -6,7 +6,6 @@ use miggi\ddl\migration;
 use miggi\ddl\type;
 use miggi\ddl\specs;
 
-use function PHPSTORM_META\type;
 
 #set_exception_handler('miggi\\cli_exception_handler');
 

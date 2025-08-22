@@ -18,7 +18,7 @@ class table {
 
     public function add_column($name, ...$defs): self {
         $col = new column($name);
-        var_dump($defs);
+        // var_dump($defs);
         while ($def = current($defs)) {
             if ($def instanceof type) {
                 $arg = next($defs);
@@ -51,7 +51,7 @@ class table {
     }
 
     public function parse_column(string $coltext) {
-        $col = array_merge(array_filter(explode(' ', $coltext), 'trim'));
+        $col = array_merge(array_filter(explode(' ', $coltext), fn($c) => (bool) trim($c)));
         $name = array_shift($col);
         $type = array_shift($col);
         [$type, $size] = $this->parse_type($type);
@@ -63,7 +63,7 @@ class table {
                 'notnull' => $notnull = true,
                 'auto' => $auto = true,
                 'unique' => $unique = true,
-                'max' => $max = array_shift($col),
+                'max' => $max = (int) array_shift($col),
                 'default' => $default = array_shift($col),
                 default => throw new LogicException("unrecognized column token >>$token<< in definition >>$coltext<<")
             };

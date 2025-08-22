@@ -98,7 +98,7 @@ class migration {
         $this->statements[] = ["drop_index", [$table, $index_name, $cols]];
     }
 
-    public function table_name(string $name, bool $shorten = false) {
+    public function table_name(string $name, bool $shorten = false): string {
         // legacy option to shorten long table names
         if ($shorten) {
             $name = join("", array_map(fn($part) => substr($part, 0, 3), explode("_", $name)));
@@ -113,10 +113,11 @@ class migration {
         return array_map(fn($c) => trim($c), $cols);
     }
 
-    private function index_name(string $table, string|array $cols) {
-        $cols = $this->cols($cols);
+    private function index_name(string $table, string|array $cols): string {
+        $cols = join("_", $this->cols($cols));
         return $this->table_name($table) . "_idx_" . $cols;
     }
+
     public function up() {
     }
     public function down() {

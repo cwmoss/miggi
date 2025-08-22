@@ -32,7 +32,7 @@ class db {
 
     public function fetch() {
         $res = $this->pdo->select_all($this->table, 'version', 'ORDER BY version ASC');
-        return array_map(fn ($r) => $r['version'], $res);
+        return array_map(fn($r) => $r['version'], $res);
     }
 
     /*
@@ -84,7 +84,6 @@ class db {
     /**
      * Check if a table exists in the current database.
      *
-     * @param PDO $pdo PDO instance connected to a database.
      * @param string $table Table to search for.
      * @return bool TRUE if table exists, FALSE if no table found.
      */

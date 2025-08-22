@@ -1,0 +1,8 @@
+parameters:
+    level: 5
+    excludePaths:
+        - tests/legacy-migrations/013_guard_v2.php
+        - tests/migrations/sqlite/xxx20200114050000_guard_v2.php 
+    paths:
+        - src
+        - tests

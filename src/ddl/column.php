@@ -27,7 +27,7 @@ class column {
             specs::notnull => $this->notnull = true,
             specs::unique => $this->unique = true,
             specs::primary_key => $this->pk = true,
-            default => throw new LogicException("spec not implemented: " . json_encode($spec))
+            // default => throw new LogicException("spec not implemented: " . json_encode($spec))
         };
 
         return $this;

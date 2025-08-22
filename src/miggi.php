@@ -104,7 +104,8 @@ to_version - go up or down to this version
 
         $stmt = match ($direction) {
             "up" => $this->up_stmt($file),
-            "down" => $this->down_stmt($file)
+            "down" => $this->down_stmt($file),
+            default => $this->up_stmt($file)
         };
 
         if (!$stmt) {
