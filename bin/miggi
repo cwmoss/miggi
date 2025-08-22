@@ -1,0 +1,134 @@
+#!/usr/bin/env php
+<?php
+
+namespace miggi;
+
+require_once(__DIR__ . '/../vendor/autoload.php');
+
+use PDO, PDOException, Dotenv;
+use miggi\pdox;
+
+set_exception_handler('miggi\\cli_exception_handler');
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . "/../");
+$dotenv->safeLoad();
+
+$cli = new cli_parser($argv);
+
+$con = $cli->opts['db'] ?? $_ENV['MIGGI_DB'] ?? "";
+$dir = $cli->opts['dir'] ?? $_ENV['MIGGI_DIR'] ?? "";
+
+if (!($con && $dir)) {
+    print "please provide a connection AND a migrations directory\n\n";
+    help();
+}
+if ($dir[0] != "/") {
+    $dir = __DIR__ . "/../" . $dir;
+}
+
+$pdo = new pdox($con, prefix: $cli->opts['prefix'] ?? "", logger: new logger());
+
+$db = new db($pdo, $cli->opts['prefix'] ?? "");
+$miggi = new miggi($db, $dir, $cli->opts, $cli->switches);
+
+$res = match (true) {
+    $cli->command == 'init' => $miggi->init(),
+    $cli->command == 'status' => $miggi->status($cli->args[0]),
+    $cli->command == 'new' => $miggi->new_migration(join('_', $cli->args)),
+    $cli->command == 'up' => $miggi->up(),
+    $cli->command == 'down' => $miggi->down(),
+    $cli->command == 'to_version' => $miggi->to_version($cli->args[0]),
+    $cli->command == 'import-legacy' => import_legacy::import($cli->args[0], $miggi->dir),
+    default => help()
+};
+
+
+#var_dump($res);
+
+if (is_string($res)) {
+    print $res;
+} elseif ($cli->command == 'status') {
+    #var_dump($res[0]);
+    $table = new cli_table($res, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
+    print $table->render();
+} elseif ($cli->command == 'up') {
+    print $res->msg;
+    if ($res->success) {
+        $table = new cli_table($res->migrations, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
+        print $table->render();
+    }
+} elseif ($cli->command == 'down') {
+    print $res->msg;
+    if (count($res->migrations)) {
+        $table = new cli_table($res->migrations, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
+        print $table->render();
+    }
+} elseif ($cli->command == 'to_version') {
+    print $res->msg;
+    #var_dump($res->migrations);
+    if (count($res->migrations)) {
+        $table = new cli_table($res->migrations, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
+        print $table->render();
+    }
+} else {
+    //  var_dump($res);
+}
+
+function cli_exception_handler($e) {
+    print "\n😢 error\n   > " . $e->getMessage() . "\n";
+}
+
+function help() {
+    print <<<EOH
+
+😃 hi, i'm miggi, your friendly migration tool.
+i know about these commands:
+
+\e[1m\e[96m   
+    new \e[0m \e[93m name or description of the migration     \e[0m
+        create a new migration file
+\e[1m\e[96m   
+    status  \e[0m    
+        show available migrations and their status
+\e[1m\e[96m   
+    up   \e[0m       
+        do all pending migrations
+\e[1m\e[96m   
+    down \e[0m       
+        undo latest (one) migration
+\e[1m\e[96m   
+    to_version \e[0m \e[93m key    \e[0m
+        up- or downgrade to version specified by key
+
+    \e[1m\e[96m   
+    import-legacy \e[0m \e[93m from-directory    \e[0m
+        import legacy migration classes
+
+    options
+    --prefix=xyz 
+        with the commands init, status, up and down
+        executes the command on a prefixed table, if exists
+    --dir=xyz 
+        with the commands init, status, up and down
+        migrations directory, env: MIGGI_DIR defaults to ./migrations/
+    --db=adapter://user:passwd@host/db
+        database connect url, env: MIGGI_DB
+    --prefix=xyz 
+        with the commands init, status, up and down
+        executes the command on a prefixed table, if exists
+
+    switches
+    --prefixed  
+        with the command new
+        creates a new migration file with prefixed table names
+
+
+EOH;
+    /* //init muß nicht mehr vom nutzer ausgeführt werden (könnte aber)
+
+  \e[1m\e[96m   
+    init    \e[0m
+        initialize the versions table to keep track of migrations
+
+ */
+}

@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:12
+    restart: always
+    ports:
+      - 9932:5432
+    #volumes:
+    #  - db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: test
+      PGTZ: "Europe/Berlin"
+  maria:
+    image: mariadb:lts
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: test
+      MARIADB_DATABASE: test
+      MARIADB_USER: test
+      MARIADB_PASSWORD: test
+    ports:
+      - 9933:3306
+    #volumes:
+    #  - mariadb:/var/lib/mysql'
+  adminer:
+    image: adminer
+    restart: "no"
+    ports:
+      - 9934:8080
