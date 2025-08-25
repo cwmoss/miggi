@@ -129,7 +129,7 @@ to_version - go up or down to this version
         if (!is_array($stmt)) $stmt = [$stmt];
 
         foreach ($stmt as $s) {
-            var_dump([$s]);
+            // var_dump([$s]);
             $this->db->execute($s);
         }
 
@@ -416,7 +416,7 @@ to_version - go up or down to this version
 
 
         $p = $this->prefix;
-        if ($p) print("up_stmt prefix: " . $p . "\n");
+        // if ($p) print("up_stmt prefix: " . $p . "\n");
         $upstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $upstr, -1, $replacements);
         if ($p && $replacements == 0) {
             print "placeholder for prefixes not found in migration file\n";
@@ -440,14 +440,14 @@ to_version - go up or down to this version
         $downstr = trim(strstr($all, "-- migrate:down")); // alles nach migrate:down
 
         $p = $this->prefix;
-        if ($p) print("down_stmt prefix: " . $p . "\n");
+        // if ($p) print("down_stmt prefix: " . $p . "\n");
         $downstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $downstr, -1, $replacements);
         if ($p && $replacements == 0) {
             print "placeholder for prefixes not found in migration file\n";
             return false;
         }
 
-        print $downstr . "\n";
+        // print $downstr . "\n";
         // put checks here
 
         return $downstr;
