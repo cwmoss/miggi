@@ -27,6 +27,7 @@ class migration {
             else $ddl[] = $this->ddl->make_statement($statement);
         }
         // print_r($this);
+        // var_dump(["+++ ddl", $ddl]);
         return $ddl;
     }
 

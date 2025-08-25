@@ -2,37 +2,50 @@
 
 namespace miggi;
 
+use Psr\Log\AbstractLogger;
 use Exception;
 use InvalidArgumentException;
+use PDO;
 
 class miggi {
 
-    public string $prefix;
+    public db $db;
     public string $prefix_placeholder_regex;
     public string $driver_name;
 
     public function __construct(
-        public db $db,
+        string|PDO $db,
         public string $dir,
-        public array $opts,
-        public array $switches,
+        public string $prefix = "",
+        public ?AbstractLogger $logger = null,
         public bool $auto_answer = true
     ) {
-        #print "miggi opts\n";
-        #print_r($this->opts);
-        $this->prefix = $this->opts['prefix'] ?? "";
         $this->prefix_placeholder_regex = '~/\*\s*prefix\s*\*/\s*~';
         $this->dir = rtrim($dir, '/') . '/';
-        $this->driver_name = $this->db->pdo->driver_name;
+        $this->setup_connection($db);
     }
 
+    public function setup_connection($con) {
+        if (is_string($con)) {
+            $pdo = new pdox($con, prefix: $this->prefix, logger: $this->logger);
+            $db = new db($pdo, $this->prefix);
+            $this->db = $db;
+        } else {
+            throw new Exception("connection via pdo object is not implemented yet");
+        }
+        $this->driver_name = $this->db->pdo->driver_name;
+    }
+    /*
+$pdo = new pdox($con, prefix: $cli->opts['prefix'] ?? "", logger: new logger());
+
+$db = new db($pdo, $cli->opts['prefix'] ?? "");
+$miggi = new miggi($db, $dir, $cli->opts['prefix'] ?? "");
+*/
     public function init(): bool {
         $q = file_get_contents(__DIR__ . '/miggi.sql');
 
-        $q = $this->handle_prefix($q, $this->opts['prefix'] ?? '', $total);
+        $q = $this->handle_prefix($q, $this->prefix, $total);
         $res = $this->db->execute($q);
-
-        // $res = $this->db->init($this->opts['prefix'] ?? "");
         return $res === 0;
     }
 
@@ -70,7 +83,7 @@ class miggi {
         if (!$name) throw new \LogicException('you must provide a name for your migration.');
         $fname = date('YmdHis') . '_' . $name . '.sql';
         $tpl = file_get_contents(__DIR__ . '/migration.tpl');
-        if ($this->switches['prefixed'] ?? 0) {
+        if ($this->prefix) {
             $tpl = str_replace(
                 "table_name",
                 "/*prefix*/ table_name",
@@ -115,6 +128,7 @@ to_version - go up or down to this version
         if (!is_array($stmt)) $stmt = [$stmt];
 
         foreach ($stmt as $s) {
+            var_dump([$s]);
             $this->db->execute($s);
         }
 
@@ -254,8 +268,9 @@ to_version - go up or down to this version
         });
         #print_r($candidates);
         $candidates = array_map(function ($filename) {
-            list($key, $name) = explode('_', basename($filename, '.sql'), 2);
-            return new migration($key, $name, $filename);
+            $info = pathinfo($filename);
+            list($key, $name) = explode('_', $info["filename"], 2);
+            return new migration($key, $name, $filename, $info["extension"]);
         }, $candidates);
 
         return $candidates;
@@ -286,7 +301,7 @@ to_version - go up or down to this version
 
     public function fetch_by_keys($keys) {
 
-        $candidates = glob($this->dir . '/*.sql');
+        $candidates = glob($this->dir . '/*.{sql,php}', \GLOB_BRACE);
         $result = [];
 
         $candidates = array_filter($candidates, function ($f) {
@@ -296,9 +311,10 @@ to_version - go up or down to this version
             return true;
         });
         foreach ($candidates as $filename) {
-            list($key, $name) = explode('_', basename($filename, '.sql'), 2);
+            $info = pathinfo($filename);
+            list($key, $name) = explode('_', $info["filename"], 2);
             if (in_array($key, $keys)) {
-                $appmig = new migration($key, $name, $filename);
+                $appmig = new migration($key, $name, $filename, $info["extension"]);
                 $appmig->status = "applied";
                 $result[] = $appmig;
             }
@@ -312,23 +328,71 @@ to_version - go up or down to this version
         return $ddl;
     }
 
-    public function statements_php(string $file, string $direction) {
+    public function statements_php(string $file, string $direction): array {
         [$key, $name] = explode('_', basename($file, '.php'), 2);
         // $clasn = "miggi\\migrations\\$name";
         // include($file);
-        $clasn = self::find_class_in_file($file);
+        $clasn = self::find_class_in_file_via_tokenizer($file);
         $m = new $clasn($this->driver_name, $this->prefix);
-        $m->run($direction == "down");
-        return $m->ddl;
+        return $m->run($direction == "down");
     }
 
     // https://stackoverflow.com/questions/7153000/get-class-name-from-file
     static function find_class_in_file(string $file) {
         $classes = get_declared_classes();
-        include $file;
+        include_once($file);
         $diff = array_diff(get_declared_classes(), $classes);
         $class = reset($diff);
         return $class;
+    }
+
+    // https://gist.github.com/cwhite92/f0aaf008e1679b27768fbb8c884df6f7
+    static function find_class_in_file_via_tokenizer(string $file) {
+        $class = self::fqcnFromPath($file);
+        include_once($file);
+        return $class;
+    }
+
+    static public function fqcnFromPath(string $path): string {
+        $namespace = $class = $buffer = '';
+
+        $handle = fopen($path, 'r');
+
+        while (!feof($handle)) {
+            $buffer .= fread($handle, 512);
+
+            // Suppress warnings for cases where `$buffer` ends in the middle of a PHP comment.
+            $tokens = @token_get_all($buffer);
+
+            // Filter out whitespace and comments from the tokens, as they are irrelevant.
+            $tokens = array_filter($tokens, fn($token) => $token[0] !== T_WHITESPACE && $token[0] !== T_COMMENT);
+
+            // Reset array indexes after filtering.
+            $tokens = array_values($tokens);
+
+            foreach ($tokens as $index => $token) {
+                // The namespace is a `T_NAME_QUALIFIED` that is immediately preceded by a `T_NAMESPACE`.
+                if ($token[0] === T_NAMESPACE && isset($tokens[$index + 1]) && $tokens[$index + 1][0] === T_NAME_QUALIFIED) {
+                    $namespace = $tokens[$index + 1][1];
+                    continue;
+                }
+
+                // The class name is a `T_STRING` which makes it unreliable to match against, so check if we have a
+                // `T_CLASS` token with a `T_STRING` token ahead of it.
+                if ($token[0] === T_CLASS && isset($tokens[$index + 1]) && $tokens[$index + 1][0] === T_STRING) {
+                    $class = $tokens[$index + 1][1];
+                }
+            }
+
+            if ($namespace && $class) {
+                // We've found both the namespace and the class, we can now stop reading and parsing the file.
+                break;
+            }
+        }
+
+        fclose($handle);
+
+        return $namespace . '\\' . $class;
     }
 
     public function up_stmt($file) {
@@ -346,7 +410,7 @@ to_version - go up or down to this version
         $upstr = trim(strstr($upstr, "-- migrate:up")); // alles vor migrate:up entfernen
 
 
-        $p = $this->opts['prefix'] ?? "";
+        $p = $this->prefix;
         if ($p) print("up_stmt prefix: " . $p . "\n");
         $upstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $upstr, -1, $replacements);
         if ($p && $replacements == 0) {
@@ -370,7 +434,7 @@ to_version - go up or down to this version
 
         $downstr = trim(strstr($all, "-- migrate:down")); // alles nach migrate:down
 
-        $p = $this->opts['prefix'] ?? "";
+        $p = $this->prefix;
         if ($p) print("down_stmt prefix: " . $p . "\n");
         $downstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $downstr, -1, $replacements);
         if ($p && $replacements == 0) {
