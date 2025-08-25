@@ -20,7 +20,7 @@ class mysql extends driver {
         $type = $this->type($col);
         $ddl[] = $type;
         if ($col->auto) {
-            $ddl[] = "PRIMARY KEY AUTOINCREMENT NOT NULL"; # todo nn
+            $ddl[] = "PRIMARY KEY AUTO_INCREMENT NOT NULL"; # todo nn
             if (count($keys) > 1) {
                 // print_r($keys);
                 throw new LogicException("can't have multiple keys with autoincrement feature");
@@ -35,7 +35,7 @@ class mysql extends driver {
             $ddl[] = "UNIQUE";
         }
         if ($col->notnull && !$col->pk && !$col->auto) {
-            $ddl[] = "NOTNULL";
+            $ddl[] = "NOT NULL";
         }
         if ($col->default !== null) {
             $ddl[] = "DEFAULT \"$col->default\"";
@@ -48,7 +48,7 @@ class mysql extends driver {
 
     public function type(column $col): string {
         return match ([$col->type, $col->size]) {
-            [type::string, $col->size] => 'VARCHAR($col->size)',
+            [type::string, $col->size] => "VARCHAR($col->size)",
             [type::number, $col->size] => 'INTEGER',
             [type::datetime, $col->size] => 'DATETIME',
             [type::timestamp, $col->size] => 'DATETIME',

@@ -6,6 +6,7 @@ use Psr\Log\AbstractLogger;
 use Exception;
 use InvalidArgumentException;
 use PDO;
+use PDOException;
 
 class miggi {
 
@@ -134,8 +135,12 @@ to_version - go up or down to this version
 
         $checkf = "check" . ($direction == 'up' ? 'in' : 'out');
         $this->db->$checkf($key);
-        $this->db->pdo->commit();
-
+        try {
+            $this->db->pdo->commit();
+        } catch (PDOException $e) {
+            // no active transaction
+            print $e->getMessage() . "\n";
+        }
         return true;
     }
 

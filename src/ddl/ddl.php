@@ -6,10 +6,16 @@ use LogicException;
 
 class ddl {
 
-    public sqlite $driver;
+    public driver $driver;
 
-    public function __construct(public string $driver_name) {
-        $this->driver = new sqlite;
+    public function __construct(public string $driver_name, public string $prefix) {
+        $this->driver = match ($driver_name) {
+            "sqlite" => new sqlite,
+            "mysql" => new mysql,
+            "postgres" => new postgres,
+            default => new sqlite
+        };
+        if ($prefix) $this->prefix = $prefix . "_";
     }
 
     public function make_statement($statement): string {
@@ -22,36 +28,36 @@ class ddl {
     }
 
     public function drop_table($name): string {
-        return "DROP TABLE $name";
+        return "DROP TABLE {$this->prefix}$name";
     }
 
     public function rename_table($old, $new): string {
-        return "ALTER TABLE $old RENAME TO $new";
+        return "ALTER TABLE {$this->prefix}$old RENAME TO $new";
     }
 
     public function rename_column($table, $old, $new): string {
-        return "ALTER TABLE $table RENAME COLUMN FROM $old TO $new";
+        return "ALTER TABLE {$this->prefix}$table RENAME COLUMN FROM $old TO $new";
     }
 
     public function add_column(table $table): string {
         $def = $this->driver->column_definition($table->columns[0], []);
-        return "ALTER TABLE $table->name ADD COLUMN $def";
+        return "ALTER TABLE {$this->prefix}$table->name ADD COLUMN $def";
     }
     public function drop_column(string $table, string $name): string {
-        return "ALTER TABLE $table DROP COLUMN $name";
+        return "ALTER TABLE {$this->prefix}$table DROP COLUMN $name";
     }
 
     public function alter_column(string $table, string $name): string {
-        return "ALTER TABLE $table ALTER COLUMN $name";
+        return "ALTER TABLE {$this->prefix}$table ALTER COLUMN $name";
     }
 
     public function create_index(string $table, string $name, array $cols, string $type = ""): string {
         $cols = join(", ", $cols);
-        return "CREATE $type INDEX $name ON $table ($cols)";
+        return "CREATE $type INDEX {$this->prefix}$name ON {$this->prefix}$table ($cols)";
     }
 
     public function drop_index(string $table, string $name, array $cols): string {
-        return "DROP INDEX $name ON $table";
+        return "DROP INDEX {$this->prefix}$name ON {$this->prefix}$table";
     }
 
     public function create_table(table $table): string {
@@ -59,7 +65,7 @@ class ddl {
             if ($item->pk) $res[] = $item->name;
             return $res;
         }, []);
-        $ddl = ['CREATE TABLE ' . $table->name . '('];
+        $ddl = ['CREATE TABLE ' . $this->prefix . $table->name . '('];
         $cols_ddl = $this->create_columns($table->columns, $keys);
 
         if ($keys && count($keys) > 1) {

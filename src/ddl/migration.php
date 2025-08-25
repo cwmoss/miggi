@@ -12,7 +12,7 @@ class migration {
     public ddl $ddl;
 
     public function __construct(public string $driver_name, public string $prefix = "") {
-        $this->ddl = new ddl($driver_name);
+        $this->ddl = new ddl($driver_name, $prefix);
     }
 
     public function run($down = false) {
