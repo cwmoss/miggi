@@ -37,7 +37,7 @@ class sqlite extends driver {
         return join(" ", $ddl);
     }
 
-    public function type(column $col) {
+    public function type(column $col): string {
         return match ([$col->type, $col->size]) {
             [type::string, $col->size] => 'TEXT',
             [type::number, $col->size] => 'INTEGER',

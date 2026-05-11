@@ -10,6 +10,7 @@ class migration {
         public string $key,
         public ?string $name = null,
         public ?string $filename = null,
+        public ?string $type = "sql",
         public ?string $status = '-'
     ) {
     }

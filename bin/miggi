@@ -25,11 +25,8 @@ if (!($con && $dir)) {
 if ($dir[0] != "/") {
     $dir = __DIR__ . "/../" . $dir;
 }
-// var_dump($cli->opts);
-$pdo = new pdox($con, prefix: $cli->opts['prefix'] ?? "", logger: new logger());
 
-$db = new db($pdo, $cli->opts['prefix'] ?? "");
-$miggi = new miggi($db, $dir, $cli->opts, $cli->switches);
+$miggi = new miggi($con, $dir, $cli->opts['prefix'] ?? "", logger: new logger());
 
 $res = match (true) {
     $cli->command == 'init' => $miggi->init(),

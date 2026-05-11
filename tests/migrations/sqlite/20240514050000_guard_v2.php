@@ -1,6 +1,8 @@
 <?php
 
-class Migration_guard_v2 extends XorcStore_Migration {
+use miggi\ddl\migration;
+
+class guard_v2  extends migration {
 
    /*
    CREATE TABLE IF NOT EXISTS guard_blocked (
@@ -28,6 +30,7 @@ CREATE TABLE IF NOT EXISTS guard_failed_attempts(
       $this->create_table("guard_blocked", "
          rule c(3) KEY,
          val c(64) KEY,
+         status I1 NOTNULL,
          blocked_until T,
          block_count I,
          created_at T NOTNULL,
