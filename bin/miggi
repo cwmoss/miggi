@@ -25,7 +25,7 @@ if (!($con && $dir)) {
 if ($dir[0] != "/") {
     $dir = __DIR__ . "/../" . $dir;
 }
-
+// var_dump($cli->opts);
 $pdo = new pdox($con, prefix: $cli->opts['prefix'] ?? "", logger: new logger());
 
 $db = new db($pdo, $cli->opts['prefix'] ?? "");
@@ -33,11 +33,11 @@ $miggi = new miggi($db, $dir, $cli->opts, $cli->switches);
 
 $res = match (true) {
     $cli->command == 'init' => $miggi->init(),
-    $cli->command == 'status' => $miggi->status($cli->args[0]),
+    $cli->command == 'status' => $miggi->status($cli->args[0] ?? null),
     $cli->command == 'new' => $miggi->new_migration(join('_', $cli->args)),
     $cli->command == 'up' => $miggi->up(),
     $cli->command == 'down' => $miggi->down(),
-    $cli->command == 'to_version' => $miggi->to_version($cli->args[0]),
+    $cli->command == 'to_version' => $miggi->to_version($cli->args[0] ?? null),
     $cli->command == 'import-legacy' => import_legacy::import($cli->args[0], $miggi->dir),
     default => help()
 };
