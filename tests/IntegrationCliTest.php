@@ -12,7 +12,7 @@ final class IntegrationCliTest extends TestCase {
         // $spool = $base . '/transfer/bancosprint_out/';
         chdir($base);
         $command = "bin/miggi $args";
-        $result = `$command`;
+        $result = shell_exec($command);
         return $result;
     }
 

@@ -15,6 +15,7 @@ final class MigrationTest extends TestCase {
 
     function get_miggi($args): miggi {
         $this->output_directory = __DIR__ . '/_output';
+        mkdir($this->output_directory);
         $dir = __DIR__ . '/migrations/sqlite';
 
         foreach (glob("$dir/*_some_new_migration.sql") as $f) {
