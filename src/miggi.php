@@ -7,6 +7,7 @@ use Exception;
 use InvalidArgumentException;
 use PDO;
 use PDOException;
+use Throwable;
 
 class miggi {
 
@@ -113,33 +114,37 @@ to_version - go up or down to this version
         }
 
         $file = $this->get_migration_file($key);
-
-        $this->db->pdo->beginTransaction();
-
-        $stmt = match ($direction) {
-            "up" => $this->up_stmt($file),
-            "down" => $this->down_stmt($file),
-            default => $this->up_stmt($file)
-        };
-
-        if (!$stmt) {
-            throw new InvalidArgumentException("no statements found in migration file {$file}");
-        }
-
-        if (!is_array($stmt)) $stmt = [$stmt];
-
-        foreach ($stmt as $s) {
-            // var_dump([$s]);
-            $this->db->execute($s);
-        }
-
-        $checkf = "check" . ($direction == 'up' ? 'in' : 'out');
-        $this->db->$checkf($key);
+        $driver = $this->db->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $non_commitable = ["mysql"];
+        $commitable = $this->db->pdo->beginTransaction() && !in_array($driver, $non_commitable);
         try {
-            $this->db->pdo->commit();
-        } catch (PDOException $e) {
+            $stmt = match ($direction) {
+                "up" => $this->up_stmt($file),
+                "down" => $this->down_stmt($file),
+                default => $this->up_stmt($file)
+            };
+            if (!$stmt) {
+                throw new InvalidArgumentException("no statements found in migration file {$file}");
+            }
+
+            if (!is_array($stmt)) $stmt = [$stmt];
+
+            foreach ($stmt as $s) {
+                // var_dump([$s]);
+                $this->db->execute($s);
+            }
+
+            $checkf = "check" . ($direction == 'up' ? 'in' : 'out');
+            $this->db->$checkf($key);
+
+            if ($commitable) $this->db->pdo->commit();
+        } catch (Throwable $e) {
+            // TODO: find a way to catch mysql driver error on commit
+            // There is no active transaction
+            if ($commitable) $this->db->pdo->rollBack();
             // no active transaction
             print $e->getMessage() . "\n";
+            throw $e;
         }
         return true;
     }
