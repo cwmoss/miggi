@@ -19,7 +19,7 @@ class db {
     }
 
     public function checkin($key) {
-        return $this->pdo->insert($this->table, ['version' => $key]);
+        return $this->pdo->insert($this->table, ['version' => $key], false);
         # $query = $this->create_checkin_statement($key);
         # return $this->pdo->exec($query);
     }

@@ -145,7 +145,7 @@ class pdox extends PDO {
     public function table($table) {
         return $this->prefix . '' . $table;
     }
-    public function insert($table, $vars) {
+    public function insert($table, $vars, $return_id = true) {
         $col_names = array_keys($vars);
         $placeholder_names = $this->placeholder_names($col_names);
         $query = sprintf(
@@ -155,7 +155,7 @@ class pdox extends PDO {
             join(', ', $placeholder_names)
         );
         $this->queryx($query, $vars);
-        return $this->lastInsertId();
+        if ($return_id) return $this->lastInsertId();
     }
 
     // TODO: prefix condition vars
