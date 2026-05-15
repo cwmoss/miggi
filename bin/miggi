@@ -7,6 +7,7 @@ require_once(__DIR__ . '/../vendor/autoload.php');
 
 use PDO, PDOException, Dotenv;
 use miggi\pdox;
+use Throwable;
 
 set_exception_handler('miggi\\cli_exception_handler');
 
@@ -49,19 +50,19 @@ if (is_string($res)) {
     $table = new cli_table($res, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
     print $table->render();
 } elseif ($cli->command == 'up') {
-    print $res->msg;
+    $res->print();
     if ($res->success) {
         $table = new cli_table($res->migrations, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
         print $table->render();
     }
 } elseif ($cli->command == 'down') {
-    print $res->msg;
+    $res->print();
     if (count($res->migrations)) {
         $table = new cli_table($res->migrations, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
         print $table->render();
     }
 } elseif ($cli->command == 'to_version') {
-    print $res->msg;
+    $res->print();
     #var_dump($res->migrations);
     if (count($res->migrations)) {
         $table = new cli_table($res->migrations, ['key' => 'Version', 'descr' => 'Name', 'file' => 'File', 'status' => 'Status', 'date' => 'Date']);
@@ -71,7 +72,7 @@ if (is_string($res)) {
     //  var_dump($res);
 }
 
-function cli_exception_handler($e) {
+function cli_exception_handler(Throwable $e) {
     print "\n😢 error\n   > " . $e->getMessage() . "\n";
 }
 

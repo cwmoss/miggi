@@ -27,7 +27,7 @@ class miggi {
         $this->setup_connection($db);
     }
 
-    public function setup_connection($con) {
+    public function setup_connection(string $con) {
         if (is_string($con)) {
             $pdo = new pdox($con, prefix: $this->prefix, logger: $this->logger);
             $db = new db($pdo, $this->prefix);
@@ -51,7 +51,7 @@ $miggi = new miggi($db, $dir, $cli->opts['prefix'] ?? "");
         return $res === 0;
     }
 
-    public function status($limit = null) {
+    public function status(null|string|int $limit = null): string|array {
 
         if (!$this->is_initialized()) {
             return "not yet initialized" . ($this->prefix ? " (with prefix " . $this->prefix . ")" : "") . "\n";
@@ -71,7 +71,7 @@ $miggi = new miggi($db, $dir, $cli->opts['prefix'] ?? "");
         }
 
         if ($limit) {
-            $limit = abs($limit);
+            $limit = abs((int) $limit);
             $max = count($available);
             $limit = ($limit > $max ? $max : $limit);
             print "LIMIT:" . $limit;
@@ -81,7 +81,7 @@ $miggi = new miggi($db, $dir, $cli->opts['prefix'] ?? "");
         #return $this->merged($available, $applied);
     }
 
-    public function new_migration($name) {
+    public function new_migration(string $name) {
         if (!$name) throw new \LogicException('you must provide a name for your migration.');
         $fname = date('YmdHis') . '_' . $name . '.sql';
         $tpl = file_get_contents(__DIR__ . '/migration.tpl');
@@ -107,7 +107,7 @@ to_version - go up or down to this version
     einzelne migration ausführen
     private function
     */
-    private function one($key, $direction): bool {
+    private function one(string $key, string $direction): bool {
 
         if (!$this->check_key($key)) {
             throw new InvalidArgumentException("not a valid key {$key}");
@@ -143,7 +143,7 @@ to_version - go up or down to this version
             // There is no active transaction
             if ($commitable) $this->db->pdo->rollBack();
             // no active transaction
-            print $e->getMessage() . "\n";
+            // print $e->getMessage() . "\n";
             throw $e;
         }
         return true;
@@ -168,7 +168,12 @@ to_version - go up or down to this version
             if ($appmig->status === "pending") {
                 $file = $this->dir . $appmig->file;
                 $result->msg .= "{$appmig->key} - ausführen $file\n";
-                $this->one($appmig->key, "up");
+                try {
+                    $this->one($appmig->key, "up");
+                } catch (Throwable $e) {
+                    $result->failed($appmig, $e);
+                    break;
+                }
                 $appliedkeys[] = $appmig->key;
             }
         }
@@ -177,9 +182,8 @@ to_version - go up or down to this version
             // return applied migrations
             // optinal alle (status)
             $result->migrations =  ($this->fetch_by_keys($appliedkeys));
-            $result->success = true;
         } else {
-            $result->msg .= "no applicable migrations found\n";
+            if ($result->success) $result->msg .= "no applicable migrations found\n";
         }
 
         return $result;
@@ -203,15 +207,21 @@ to_version - go up or down to this version
         }
 
         $key = end($applied);
+        $migration = $applied[$key];
         $result->msg .= "migration {$key} entfernen \n";
 
-        $this->one($key, "down");
+        try {
+            $this->one($key, "down");
+        } catch (Throwable $e) {
+            $result->failed($migration, $e);
+            return $result;
+        }
         $result->migrations = $this->fetch_by_keys([$key]); //$this->status();
         $result->migrations[0]->status = "removed";
         return $result;
     }
 
-    public function to_version($key) {
+    public function to_version(string $key) {
 
         $result = new miggi_result("migrating to version {$key}\n");
 
@@ -260,14 +270,14 @@ to_version - go up or down to this version
 
     // status:
     //      applied / not-applied / missing
-    public function merged($available, $applied) {
+    public function merged(array $available, array $applied) {
         return [$available, $applied];
     }
 
     /*
     returns list of migration-objects
     */
-    public function fetch_available() {
+    public function fetch_available(): array {
         $candidates = glob($this->dir . '/*.{sql,php}', \GLOB_BRACE);
 
         $candidates = array_filter($candidates, function ($f) {
@@ -287,7 +297,7 @@ to_version - go up or down to this version
     }
 
 
-    public function fetch_applied() {
+    public function fetch_applied(): array {
         // return ["20230320172951", "20230322155900"];
         // return ["20230320172951"];
         return $this->db->fetch();
@@ -297,7 +307,7 @@ to_version - go up or down to this version
 
     // get all pending migrations
     // returns array (which can be empty)
-    public function fetch_pending() {
+    public function fetch_pending(): array {
         $available = $this->fetch_available();
         $applied = $this->fetch_applied();
         $pending = [];
@@ -309,7 +319,7 @@ to_version - go up or down to this version
         return $pending;
     }
 
-    public function fetch_by_keys($keys) {
+    public function fetch_by_keys(array $keys) {
 
         $candidates = glob($this->dir . '/*.{sql,php}', \GLOB_BRACE);
         $result = [];
@@ -405,7 +415,7 @@ to_version - go up or down to this version
         return $namespace . '\\' . $class;
     }
 
-    public function up_stmt($file) {
+    public function up_stmt(string $file) {
         $type = pathinfo($file, \PATHINFO_EXTENSION);
 
         if ($type == 'php') {
@@ -434,7 +444,7 @@ to_version - go up or down to this version
         return $upstr;
     }
 
-    public function down_stmt($file) {
+    public function down_stmt(string $file) {
         $type = pathinfo($file, \PATHINFO_EXTENSION);
         if ($type == 'php') {
             return $this->statements_php($file, 'down');
@@ -471,7 +481,7 @@ to_version - go up or down to this version
         return $res;
     }
 
-    public function check_key($key) {
+    public function check_key(string $key) {
         if (preg_match('!^\d{14}!', $key)) {
             return $key;
         }
@@ -479,9 +489,9 @@ to_version - go up or down to this version
     }
 
     // finds the array-index of a migration in a migration-list 
-    public function find_index($list, $key) {
+    public function find_index(array $list, string $key) {
         foreach ($list as $k => $v) {
-            if ($key == $k->key) {
+            if ($key == $v->key) {
                 return $k;
             }
         }
@@ -514,7 +524,7 @@ to_version - go up or down to this version
         return true;
     }
 
-    private function get_migration_file($key) {
+    private function get_migration_file(string $key) {
         $files = glob($this->dir . $key . '_*');
         if (count($files) > 1) {
             throw new Exception("multiple files with the same key {$key}??");
@@ -526,7 +536,7 @@ to_version - go up or down to this version
     }
 
 
-    private function readc() {
+    private function readc(): string {
         $stdinpointer = fopen("php://stdin", "r");
         $line = fgets($stdinpointer);
         fclose($stdinpointer);
