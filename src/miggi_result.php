@@ -38,12 +38,13 @@ class miggi_result {
     public function print() {
         print $this->success_symbol() . " " . $this->msg . "\n";
         foreach ($this->migrations as $mig) {
-            print "  " . $this->ok_symbol(true) . " " . $mig->name . "\n";
+            print "  " . $this->ok_symbol(true) . " " . $mig->name . " " . $mig->status . "\n";
         }
         if ($this->failed_migration) {
             print "  " . $this->ok_symbol(false) . " " . $this->failed_migration->name . "\n";
             print $this->exception_trace();
         }
+        print "\n";
     }
     public function exception_trace(): string {
         $e = $this->exception;

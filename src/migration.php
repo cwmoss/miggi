@@ -15,7 +15,7 @@ class migration {
     ) {
     }
 
-    public function __get($name) {
+    public function __get(string $name) {
         if ($name == 'file') {
             return basename($this->filename);
         }
