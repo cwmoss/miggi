@@ -167,7 +167,7 @@ to_version - go up or down to this version
         foreach ($available as $appmig) {
             if ($appmig->status === "pending") {
                 $file = $this->dir . $appmig->file;
-                $result->msg .= "{$appmig->key} - ausführen $file\n";
+                $result->msg .= "{$appmig->key} - apply $file\n";
                 try {
                     $this->one($appmig->key, "up");
                 } catch (Throwable $e) {
@@ -208,7 +208,7 @@ to_version - go up or down to this version
 
         $key = end($applied);
         $migration = $applied[$key];
-        $result->msg .= "migration {$key} entfernen \n";
+        $result->msg .= "{$key} - remove\n";
 
         try {
             $this->one($key, "down");
@@ -434,7 +434,7 @@ to_version - go up or down to this version
         // if ($p) print("up_stmt prefix: " . $p . "\n");
         $upstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $upstr, -1, $replacements);
         if ($p && $replacements == 0) {
-            print "placeholder for prefixes not found in migration file\n";
+            print "placeholder for prefixes not found in UP migration file $file\n";
             return false;
         }
 
@@ -458,7 +458,7 @@ to_version - go up or down to this version
         // if ($p) print("down_stmt prefix: " . $p . "\n");
         $downstr = preg_replace($this->prefix_placeholder_regex, $p ? $p . "_" : "", $downstr, -1, $replacements);
         if ($p && $replacements == 0) {
-            print "placeholder for prefixes not found in migration file\n";
+            print "placeholder for prefixes not found in DOWN migration file $file\n";
             return false;
         }
 
