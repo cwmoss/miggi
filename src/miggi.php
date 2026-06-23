@@ -199,6 +199,7 @@ to_version - go up or down to this version
             return $result;
         }
 
+        $available = $this->status();
         $applied = $this->fetch_applied();
 
         if (count($applied) == 0) {
@@ -206,9 +207,14 @@ to_version - go up or down to this version
             return $result;
         }
 
+        //var_dump($available);
         $key = end($applied);
-        $migration = $applied[$key];
+        $idx = $this->find_index($available, $key);
+        $migration = $available[$idx];
         $result->msg .= "{$key} - remove\n";
+        // var_dump($key);
+        // var_dump($applied);
+        // var_dump($migration);
 
         try {
             $this->one($key, "down");
