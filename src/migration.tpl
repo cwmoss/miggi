@@ -1,25 +1,21 @@
 -- migrate:up
 -- put your up migrations here
 
-CREATE DATABASE databasename;
-
-CREATE TABLE table_name (
-    column1 datatype,
-    column2 datatype,
-    column3 datatype,
-   ....
+CREATE TABLE example (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE CHECK (LENGTH(name) <= 8),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE table_name
-ADD column_name datatype;
+ALTER TABLE example
+    ADD points INTEGER DEFAULT 0;
 
-
+--
 -- migrate:down
 -- can be left empty
+--
 
-DROP DATABASE databasename;
-
-ALTER TABLE table_name
-DROP COLUMN column_name;
+ALTER TABLE example
+    DROP COLUMN points;
 
 
